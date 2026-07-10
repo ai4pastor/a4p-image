@@ -1,5 +1,6 @@
 import { App, Platform, PluginSettingTab, Setting } from "obsidian";
 import type A4pImagePlugin from "./main";
+import type { CompressSettings } from "./compress";
 
 export interface A4pImageSettings {
   r2: {
@@ -13,6 +14,8 @@ export interface A4pImageSettings {
   };
   /** 붙여넣기 파일명 규칙 — note: {노트제목}_{번호}, timestamp: img-날짜-시간 */
   namingScheme: "note" | "timestamp";
+  /** 업로드 전 이미지 최적화 (리사이즈·WebP 변환·EXIF 제거) */
+  compress: CompressSettings;
   /** false = 클라우드 온리 (볼트에 백업을 남기지 않음) */
   localBackup: boolean;
   /** "" = 볼트 첨부 설정(getAvailablePathForAttachment)을 그대로 따름 */
@@ -40,6 +43,12 @@ export const DEFAULT_SETTINGS: A4pImageSettings = {
     keyPrefix: "obsidian",
   },
   namingScheme: "note",
+  compress: {
+    enabled: true,
+    maxWidth: 1920,
+    quality: 0.85,
+    convertToWebp: true,
+  },
   localBackup: true,
   attachmentSubfolder: "",
   fallbackToLocalEmbed: true,
@@ -203,6 +212,62 @@ export class A4pImageSettingTab extends PluginSettingTab {
             await this.plugin.persist();
           }),
       );
+
+    new Setting(containerEl).setName("이미지 최적화").setHeading();
+
+    new Setting(containerEl)
+      .setName("업로드 전 압축")
+      .setDesc(
+        "붙여넣는 이미지를 리사이즈·재인코딩해 용량을 크게 줄이고, EXIF(GPS 위치·기기 정보)를 제거합니다. " +
+          "svg·gif는 제외되며, 일괄 변환(기존 파일)에는 적용되지 않습니다.",
+      )
+      .addToggle((toggle) =>
+        toggle.setValue(this.plugin.settings.compress.enabled).onChange(async (value) => {
+          this.plugin.settings.compress.enabled = value;
+          await this.plugin.persist();
+          this.display();
+        }),
+      );
+
+    if (this.plugin.settings.compress.enabled) {
+      new Setting(containerEl)
+        .setName("WebP로 변환")
+        .setDesc("PNG/JPEG를 WebP로 변환합니다 (보통 용량 70~90% 절감). 끄면 원본 형식을 유지한 채 리사이즈·재인코딩만 합니다.")
+        .addToggle((toggle) =>
+          toggle.setValue(this.plugin.settings.compress.convertToWebp).onChange(async (value) => {
+            this.plugin.settings.compress.convertToWebp = value;
+            await this.plugin.persist();
+          }),
+        );
+
+      new Setting(containerEl)
+        .setName("최대 폭 (px)")
+        .setDesc("이보다 넓은 이미지는 비율을 유지하며 축소합니다. 0이면 제한 없음. 기본 1920.")
+        .addText((text) =>
+          text
+            .setPlaceholder("1920")
+            .setValue(String(this.plugin.settings.compress.maxWidth))
+            .onChange(async (value) => {
+              const n = parseInt(value, 10);
+              this.plugin.settings.compress.maxWidth = Number.isFinite(n) && n >= 0 ? n : 1920;
+              await this.plugin.persist();
+            }),
+        );
+
+      new Setting(containerEl)
+        .setName("인코딩 품질")
+        .setDesc("WebP/JPEG 품질 (50~100%). 기본 85% — 화면용으로는 차이가 거의 보이지 않습니다.")
+        .addSlider((slider) =>
+          slider
+            .setLimits(50, 100, 5)
+            .setValue(Math.round(this.plugin.settings.compress.quality * 100))
+            .setDynamicTooltip()
+            .onChange(async (value) => {
+              this.plugin.settings.compress.quality = value / 100;
+              await this.plugin.persist();
+            }),
+        );
+    }
 
     new Setting(containerEl)
       .setName("업로드 실패 시 로컬 임베드 폴백")

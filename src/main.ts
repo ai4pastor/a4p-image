@@ -7,6 +7,7 @@ import { registerPasteHandlers } from "./paste-handler";
 import { openConvertModal } from "./convert-modal";
 import { GalleryView, VIEW_TYPE_A4P_IMAGE_GALLERY } from "./gallery-view";
 import { runRetryCommand, runTrashUnusedCommand, runUnusedReportCommand } from "./commands";
+import { MigrateUrlModal } from "./migrate-modal";
 import { EagleClient } from "./eagle/client";
 import { EagleSearchModal } from "./eagle/modal";
 
@@ -97,6 +98,12 @@ export default class A4pImagePlugin extends Plugin {
     });
 
     this.addCommand({
+      id: "migrate-base-url",
+      name: "이미지 주소 일괄 변경 (도메인 전환·주소 복구)",
+      callback: () => new MigrateUrlModal(this.app, this).open(),
+    });
+
+    this.addCommand({
       id: "unused-report",
       name: "미사용 이미지 리포트 생성",
       callback: () => void runUnusedReportCommand(this),
@@ -157,6 +164,7 @@ export default class A4pImagePlugin extends Plugin {
       ...DEFAULT_SETTINGS,
       ...saved,
       r2: { ...DEFAULT_SETTINGS.r2, ...(saved.r2 ?? {}) },
+      compress: { ...DEFAULT_SETTINGS.compress, ...(saved.compress ?? {}) },
       eagle: { ...DEFAULT_SETTINGS.eagle, ...(saved.eagle ?? {}) },
     };
   }

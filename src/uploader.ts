@@ -13,6 +13,7 @@ import {
   stemOf,
 } from "./filename";
 import { sha256Hex } from "./r2/sigv4";
+import { compressImage } from "./compress";
 
 export interface ProcessInput {
   /** 원본 파일명 (drop/eagle 등 이름이 있을 때) — 없으면 타임스탬프 이름 생성 */
@@ -43,9 +44,21 @@ export class Uploader {
       return { ok: true, url: existing.url, stem: stemOf(fileNameOf(existing)), entryId: existing.id, reused: true };
     }
 
+    // 압축·재인코딩 (EXIF 제거 포함) — 실패 시 원본 사용. hash는 원본 기준이라 dedup은 설정과 무관.
+    let workBuf = buf;
+    let workMime = input.mime;
+    const cs = this.plugin.settings.compress;
+    if (cs.enabled) {
+      const compressed = await compressImage(buf, workMime, cs);
+      if (compressed) {
+        workBuf = compressed.buf;
+        workMime = compressed.mime;
+      }
+    }
+
     const now = new Date();
     const extFromName = input.name ? extOf(input.name) : "";
-    const ext = extForMime(input.mime) ?? (extFromName || "png");
+    const ext = extForMime(workMime) ?? (extFromName || "png");
 
     let filename: string;
     if (input.name) {
@@ -60,7 +73,7 @@ export class Uploader {
     let localPath: string | null = null;
     if (this.plugin.settings.localBackup) {
       try {
-        localPath = await this.saveToVault(filename, buf, input.sourceNotePath);
+        localPath = await this.saveToVault(filename, workBuf, input.sourceNotePath);
       } catch (e) {
         // 로컬 저장 실패는 업로드를 막지 않는다 — 클라우드로 계속 진행
         console.error("[a4p-image] 로컬 백업 저장 실패", e);
@@ -77,8 +90,8 @@ export class Uploader {
       r2Key: makeR2Key(this.plugin.settings.r2.keyPrefix, now, finalName),
       url: "",
       hash,
-      size: buf.byteLength,
-      mime: input.mime || mimeForExt(ext),
+      size: workBuf.byteLength,
+      mime: workMime || mimeForExt(ext),
       createdAt: now.getTime(),
       uploadedAt: null,
       status: "pending",
@@ -89,7 +102,7 @@ export class Uploader {
     entry.url = this.plugin.r2.publicUrl(entry.r2Key);
     manifestStore.add(entry);
 
-    return this.uploadEntry(entry, buf);
+    return this.uploadEntry(entry, workBuf);
   }
 
   /** 볼트에 이미 존재하는 이미지 파일(일괄 변환) 처리 — 파일이 그대로 로컬 백업이 됨 */
