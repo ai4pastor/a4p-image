@@ -1,0 +1,138 @@
+/* ===== 설정 탭 ===== */
+.a4p-image-settings-status {
+  margin: 0.5em 0 1em;
+}
+.a4p-image-settings-status-line {
+  margin: 0.2em 0;
+  font-size: var(--font-ui-small);
+  color: var(--text-muted);
+}
+
+/* ===== 갤러리 뷰 ===== */
+.a4p-image-gallery-toolbar {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  padding: 6px 4px;
+  position: sticky;
+  top: 0;
+  background: var(--background-primary);
+  z-index: 1;
+}
+.a4p-image-gallery-toolbar input[type="text"] {
+  flex: 1;
+  min-width: 0;
+}
+.a4p-image-gallery-count {
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.a4p-image-gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 8px;
+  padding: 4px;
+}
+.a4p-image-gallery-card {
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  overflow: hidden;
+  cursor: pointer;
+  background: var(--background-secondary);
+}
+.a4p-image-gallery-card:hover {
+  border-color: var(--interactive-accent);
+}
+.a4p-image-gallery-thumb {
+  width: 100%;
+  height: 90px;
+  object-fit: cover;
+  display: block;
+  background: var(--background-modifier-border);
+}
+.a4p-image-gallery-meta {
+  padding: 4px 6px;
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.a4p-image-gallery-badge {
+  display: inline-block;
+  padding: 0 4px;
+  border-radius: 4px;
+  font-size: 10px;
+  margin-right: 4px;
+}
+.a4p-image-gallery-badge.pending,
+.a4p-image-gallery-badge.failed {
+  background: var(--background-modifier-error);
+  color: var(--text-on-accent);
+}
+.a4p-image-gallery-actions {
+  display: flex;
+  gap: 4px;
+  padding: 0 6px 6px;
+}
+.a4p-image-gallery-actions button {
+  font-size: var(--font-ui-smaller);
+  padding: 1px 6px;
+  height: auto;
+}
+
+/* ===== 변환 계획 / 휴지통 모달 ===== */
+.a4p-image-plan-list {
+  max-height: 45vh;
+  overflow-y: auto;
+  margin: 0.5em 0;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  padding: 6px;
+}
+.a4p-image-plan-note {
+  font-weight: 600;
+  margin-top: 0.5em;
+}
+.a4p-image-plan-item {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  font-size: var(--font-ui-small);
+  color: var(--text-muted);
+  padding-left: 1em;
+}
+.a4p-image-plan-item .dedup {
+  color: var(--text-accent);
+  font-size: var(--font-ui-smaller);
+}
+.a4p-image-modal-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 1em;
+}
+.a4p-image-trash-warning {
+  color: var(--text-error);
+  font-size: var(--font-ui-small);
+  margin: 0.5em 0;
+}
+
+/* ===== Eagle 검색 모달 ===== */
+.a4p-image-eagle-suggestion {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.a4p-image-eagle-thumb {
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+.a4p-image-eagle-meta {
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+}

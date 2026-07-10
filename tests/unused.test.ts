@@ -1,0 +1,113 @@
+import { describe, expect, it } from "vitest";
+import { buildReportMarkdown, classifyUnused } from "../src/unused";
+import type { ManifestEntry } from "../src/types";
+
+function makeEntry(overrides: Partial<ManifestEntry> = {}): ManifestEntry {
+  return {
+    id: "e1",
+    localPath: "attach/backup.png",
+    r2Key: "obsidian/2026/07/backup.png",
+    url: "https://pub-x.r2.dev/obsidian/2026/07/backup.png",
+    hash: "h1",
+    size: 1000,
+    mime: "image/png",
+    createdAt: 1,
+    uploadedAt: 2,
+    status: "uploaded",
+    sourceNote: null,
+    origin: "paste",
+    eagleId: null,
+    ...overrides,
+  };
+}
+
+describe("classifyUnused", () => {
+  it("URL이 볼트에 살아 있는 백업은 미사용으로 오판하지 않는다 (핵심 보호)", () => {
+    const entry = makeEntry();
+    const report = classifyUnused({
+      images: [{ path: "attach/backup.png", size: 1000 }],
+      resolvedTargets: new Set(),
+      entries: [entry],
+      urlsInVault: new Set([entry.url]),
+    });
+    expect(report.fullyUnused).toHaveLength(0);
+    expect(report.orphanedBackups).toHaveLength(0);
+    expect(report.cloudOrphans).toHaveLength(0);
+  });
+
+  it("URL이 사라진 백업은 orphanedBackups로 분류", () => {
+    const entry = makeEntry();
+    const report = classifyUnused({
+      images: [{ path: "attach/backup.png", size: 1000 }],
+      resolvedTargets: new Set(),
+      entries: [entry],
+      urlsInVault: new Set(),
+    });
+    expect(report.orphanedBackups.map((e) => e.id)).toEqual(["e1"]);
+    expect(report.fullyUnused).toHaveLength(0);
+  });
+
+  it("위키링크로 참조 중인 이미지는 사용 중", () => {
+    const report = classifyUnused({
+      images: [{ path: "attach/used.png", size: 10 }],
+      resolvedTargets: new Set(["attach/used.png"]),
+      entries: [],
+      urlsInVault: new Set(),
+    });
+    expect(report.fullyUnused).toHaveLength(0);
+  });
+
+  it("매니페스트에 없고 참조도 없는 이미지는 fullyUnused", () => {
+    const report = classifyUnused({
+      images: [{ path: "attach/random.png", size: 10 }],
+      resolvedTargets: new Set(),
+      entries: [],
+      urlsInVault: new Set(),
+    });
+    expect(report.fullyUnused.map((i) => i.path)).toEqual(["attach/random.png"]);
+  });
+
+  it("로컬 백업이 사라지고 URL도 안 쓰이는 업로드 항목은 cloudOrphans", () => {
+    const orphan = makeEntry({ id: "e2", localPath: null });
+    const pendingNoLocal = makeEntry({ id: "e3", localPath: null, status: "pending" });
+    const report = classifyUnused({
+      images: [],
+      resolvedTargets: new Set(),
+      entries: [orphan, pendingNoLocal],
+      urlsInVault: new Set(),
+    });
+    expect(report.cloudOrphans.map((e) => e.id)).toEqual(["e2"]); // pending은 제외
+  });
+
+  it("로컬 백업이 폴백 임베드로 직접 참조되는 경우도 사용 중", () => {
+    const entry = makeEntry({ status: "failed" });
+    const report = classifyUnused({
+      images: [{ path: "attach/backup.png", size: 1000 }],
+      resolvedTargets: new Set(["attach/backup.png"]),
+      entries: [entry],
+      urlsInVault: new Set(),
+    });
+    expect(report.orphanedBackups).toHaveLength(0);
+    expect(report.fullyUnused).toHaveLength(0);
+  });
+});
+
+describe("buildReportMarkdown", () => {
+  it("3개 섹션과 안전 안내가 포함된다", () => {
+    const md = buildReportMarkdown(
+      {
+        fullyUnused: [{ path: "attach/a.png", size: 2048 }],
+        orphanedBackups: [makeEntry()],
+        cloudOrphans: [makeEntry({ id: "e9", localPath: null })],
+      },
+      new Date("2026-07-10T12:00:00Z"),
+    );
+    expect(md).toContain("# 미사용 이미지 리포트 (2026-07-10)");
+    expect(md).toContain("## A. 완전 미사용 로컬 이미지 (1개)");
+    expect(md).toContain("## B. 노트에서 URL이 사라진 로컬 백업 (1개)");
+    expect(md).toContain("## C. R2에만 남은 고아 객체 (1개)");
+    expect(md).toContain("자동으로 삭제·이동되지 않습니다");
+    expect(md).toContain("[[attach/a.png]]");
+    expect(md).toContain("2.0 KB");
+  });
+});
