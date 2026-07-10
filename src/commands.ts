@@ -1,5 +1,6 @@
-import { Notice, TFile, normalizePath } from "obsidian";
+import { App, Notice, TFile, normalizePath } from "obsidian";
 import type A4pImagePlugin from "./main";
+import type { ManifestEntry } from "./types";
 import { isImageExt } from "./filename";
 import { UnusedInput, buildReportMarkdown, classifyUnused } from "./unused";
 import { TrashCandidate, TrashSelectModal } from "./trash-modal";
@@ -20,6 +21,24 @@ export async function runRetryCommand(plugin: A4pImagePlugin): Promise<void> {
     console.error("[a4p-image] 재시도 실패:\n" + result.failed.join("\n"));
   }
   new Notice(msg, 8000);
+}
+
+/** 이 이미지를 사용 중인 노트 검색 — 위키링크(로컬 백업) + 클라우드 URL 본문 검색 */
+export async function findImageUsages(app: App, entry: ManifestEntry): Promise<string[]> {
+  const usages = new Set<string>();
+  if (entry.localPath) {
+    for (const [mdPath, links] of Object.entries(app.metadataCache.resolvedLinks)) {
+      if (links[entry.localPath]) usages.add(mdPath);
+    }
+  }
+  if (entry.url) {
+    for (const md of app.vault.getMarkdownFiles()) {
+      if (usages.has(md.path)) continue;
+      const content = await app.vault.cachedRead(md);
+      if (content.includes(entry.url)) usages.add(md.path);
+    }
+  }
+  return [...usages];
 }
 
 /** 미사용 판정 입력 수집 — 볼트 이미지, 위키링크 참조 집합, md 본문에 살아 있는 URL 집합 */

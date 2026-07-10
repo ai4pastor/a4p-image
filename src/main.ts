@@ -8,6 +8,7 @@ import { openConvertModal } from "./convert-modal";
 import { GalleryView, VIEW_TYPE_A4P_IMAGE_GALLERY } from "./gallery-view";
 import { runRetryCommand, runTrashUnusedCommand, runUnusedReportCommand } from "./commands";
 import { MigrateUrlModal } from "./migrate-modal";
+import { registerEditorTracker } from "./insert";
 import { EagleClient } from "./eagle/client";
 import { EagleSearchModal } from "./eagle/modal";
 
@@ -46,6 +47,7 @@ export default class A4pImagePlugin extends Plugin {
 
     this.addSettingTab(new A4pImageSettingTab(this.app, this));
     registerPasteHandlers(this);
+    registerEditorTracker(this); // 갤러리(사이드 패널)에서도 본문 에디터에 삽입할 수 있게 추적
 
     // 로컬 백업 경로 추적 — 외부 플러그인(paste-image-rename 등)의 rename에도 매핑 유지
     this.registerEvent(

@@ -22,7 +22,7 @@ __export(main_exports, {
   default: () => A4pImagePlugin
 });
 module.exports = __toCommonJS(main_exports);
-var import_obsidian12 = require("obsidian");
+var import_obsidian14 = require("obsidian");
 
 // src/settings.ts
 var import_obsidian = require("obsidian");
@@ -1238,234 +1238,56 @@ async function mapPool(items, limit, fn) {
 }
 
 // src/gallery-view.ts
+var import_obsidian10 = require("obsidian");
+
+// src/insert.ts
 var import_obsidian6 = require("obsidian");
-var VIEW_TYPE_A4P_IMAGE_GALLERY = "a4p-image-gallery-view";
-var DEBOUNCE_MS = 150;
-var GalleryView = class extends import_obsidian6.ItemView {
-  constructor(leaf, plugin) {
-    super(leaf);
-    this.gridEl = null;
-    this.countEl = null;
-    this.statsEl = null;
-    this.query = "";
-    this.statusFilter = "all";
-    this.dateFilter = "all";
-    this.groupByNote = false;
-    this.debounceTimer = null;
-    this.plugin = plugin;
-  }
-  getViewType() {
-    return VIEW_TYPE_A4P_IMAGE_GALLERY;
-  }
-  getDisplayText() {
-    return "A4P \uC774\uBBF8\uC9C0 \uAC24\uB7EC\uB9AC";
-  }
-  getIcon() {
-    return "image";
-  }
-  async onOpen() {
-    const root = this.containerEl.children[1];
-    root.empty();
-    const toolbar = root.createDiv({ cls: "a4p-image-gallery-toolbar" });
-    const input = toolbar.createEl("input", { type: "text", placeholder: "\uD30C\uC77C\uBA85\xB7\uB178\uD2B8 \uAC80\uC0C9" });
-    input.addEventListener("input", () => {
-      if (this.debounceTimer !== null)
-        window.clearTimeout(this.debounceTimer);
-      this.debounceTimer = window.setTimeout(() => {
-        this.query = input.value.trim().toLowerCase();
-        this.renderGrid();
-      }, DEBOUNCE_MS);
-    });
-    const statusSelect = toolbar.createEl("select");
-    for (const [value, label] of [
-      ["all", "\uC804\uCCB4"],
-      ["uploaded", "\uC5C5\uB85C\uB4DC\uB428"],
-      ["pending", "\uB300\uAE30"],
-      ["failed", "\uC2E4\uD328"]
-    ]) {
-      const opt = statusSelect.createEl("option", { text: label });
-      opt.value = value;
-    }
-    statusSelect.addEventListener("change", () => {
-      this.statusFilter = statusSelect.value;
-      this.renderGrid();
-    });
-    const dateSelect = toolbar.createEl("select");
-    for (const [value, label] of [
-      ["all", "\uC804\uCCB4 \uAE30\uAC04"],
-      ["7", "\uCD5C\uADFC 7\uC77C"],
-      ["30", "\uCD5C\uADFC 30\uC77C"]
-    ]) {
-      const opt = dateSelect.createEl("option", { text: label });
-      opt.value = value;
-    }
-    dateSelect.addEventListener("change", () => {
-      this.dateFilter = dateSelect.value;
-      this.renderGrid();
-    });
-    const groupBtn = toolbar.createEl("button", { text: "\uB178\uD2B8\uBCC4" });
-    groupBtn.title = "\uB178\uD2B8\uBCC4 \uADF8\uB8F9 \uBCF4\uAE30 \uC804\uD658";
-    groupBtn.addEventListener("click", () => {
-      this.groupByNote = !this.groupByNote;
-      groupBtn.toggleClass("mod-cta", this.groupByNote);
-      this.renderGrid();
-    });
-    const refreshBtn = toolbar.createEl("button", { text: "\uC0C8\uB85C\uACE0\uCE68" });
-    refreshBtn.addEventListener("click", () => this.renderGrid());
-    this.countEl = toolbar.createSpan({ cls: "a4p-image-gallery-count" });
-    this.statsEl = root.createDiv({ cls: "a4p-image-gallery-stats" });
-    this.gridEl = root.createDiv({ cls: "a4p-image-gallery-grid" });
-    this.renderGrid();
-  }
-  async onClose() {
-    if (this.debounceTimer !== null)
-      window.clearTimeout(this.debounceTimer);
-  }
-  entryName(entry) {
-    var _a;
-    const path = (_a = entry.localPath) != null ? _a : entry.r2Key;
-    const i = path.lastIndexOf("/");
-    return i >= 0 ? path.slice(i + 1) : path;
-  }
-  renderGrid() {
-    var _a, _b, _c, _d;
-    if (!this.gridEl)
-      return;
-    this.gridEl.empty();
-    const allEntries = this.plugin.manifestStore.all();
-    let entries = [...allEntries].sort((a, b) => b.createdAt - a.createdAt);
-    if (this.statusFilter !== "all")
-      entries = entries.filter((e) => e.status === this.statusFilter);
-    if (this.dateFilter !== "all") {
-      const cutoff = Date.now() - parseInt(this.dateFilter, 10) * 24 * 60 * 60 * 1e3;
-      entries = entries.filter((e) => e.createdAt >= cutoff);
-    }
-    if (this.query) {
-      entries = entries.filter((e) => {
-        var _a2;
-        const haystack = `${this.entryName(e)} ${(_a2 = e.sourceNote) != null ? _a2 : ""}`.toLowerCase();
-        return haystack.includes(this.query);
-      });
-    }
-    const filteredSize = entries.reduce((sum, e) => sum + e.size, 0);
-    (_a = this.countEl) == null ? void 0 : _a.setText(`${entries.length}\uAC1C \xB7 ${formatBytes(filteredSize)}`);
-    const uploadedSize = allEntries.filter((e) => e.status === "uploaded").reduce((sum, e) => sum + e.size, 0);
-    const pctOfFree = (uploadedSize / (10 * 1024 * 1024 * 1024) * 100).toFixed(2);
-    (_b = this.statsEl) == null ? void 0 : _b.setText(`R2 \uC0AC\uC6A9\uB7C9 \uCD94\uC815: ${formatBytes(uploadedSize)} (\uBB34\uB8CC 10GB\uC758 ${pctOfFree}%)`);
-    if (entries.length === 0) {
-      this.gridEl.createEl("p", { text: "\uD45C\uC2DC\uD560 \uC774\uBBF8\uC9C0\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.", cls: "a4p-image-gallery-meta" });
-      return;
-    }
-    if (this.groupByNote) {
-      const groups = /* @__PURE__ */ new Map();
-      for (const entry of entries) {
-        const key = (_c = entry.sourceNote) != null ? _c : "(\uB178\uD2B8 \uBBF8\uC9C0\uC815)";
-        const list = (_d = groups.get(key)) != null ? _d : [];
-        list.push(entry);
-        groups.set(key, list);
+var lastMarkdownView = null;
+function registerEditorTracker(plugin) {
+  const app = plugin.app;
+  const seed = app.workspace.getActiveViewOfType(import_obsidian6.MarkdownView);
+  if (seed)
+    lastMarkdownView = seed;
+  plugin.registerEvent(
+    app.workspace.on("active-leaf-change", (leaf) => {
+      if (leaf && leaf.view instanceof import_obsidian6.MarkdownView) {
+        lastMarkdownView = leaf.view;
       }
-      for (const [note, groupEntries] of groups) {
-        this.gridEl.createDiv({ cls: "a4p-image-gallery-group", text: `${note} (${groupEntries.length})` });
-        const groupGrid = this.gridEl.createDiv({ cls: "a4p-image-gallery-grid-inner" });
-        for (const entry of groupEntries)
-          this.renderCard(groupGrid, entry);
-      }
-    } else {
-      for (const entry of entries) {
-        this.renderCard(this.gridEl, entry);
-      }
-    }
+    })
+  );
+}
+function findTargetMarkdownView(app) {
+  const leaves = app.workspace.getLeavesOfType("markdown");
+  if (lastMarkdownView) {
+    const stillOpen = leaves.some((l) => l.view === lastMarkdownView);
+    if (stillOpen)
+      return lastMarkdownView;
+    lastMarkdownView = null;
   }
-  renderCard(parent, entry) {
-    var _a;
-    const name = this.entryName(entry);
-    const card = parent.createDiv({ cls: "a4p-image-gallery-card" });
-    const img = card.createEl("img", { cls: "a4p-image-gallery-thumb" });
-    img.loading = "lazy";
-    const local = entry.localPath ? this.app.vault.getAbstractFileByPath(entry.localPath) : null;
-    img.src = local instanceof import_obsidian6.TFile ? this.app.vault.getResourcePath(local) : entry.url;
-    img.alt = name;
-    const meta = card.createDiv({ cls: "a4p-image-gallery-meta" });
-    if (entry.status !== "uploaded") {
-      meta.createSpan({ cls: `a4p-image-gallery-badge ${entry.status}`, text: entry.status === "failed" ? "\uC2E4\uD328" : "\uB300\uAE30" });
-    }
-    meta.createSpan({ text: `${name} \xB7 ${formatBytes(entry.size)}` });
-    meta.title = `${name}
-${(_a = entry.localPath) != null ? _a : "(\uB85C\uCEEC \uBC31\uC5C5 \uC5C6\uC74C)"}
-${entry.url}`;
-    const actions = card.createDiv({ cls: "a4p-image-gallery-actions" });
-    const copyBtn = actions.createEl("button", { text: "URL" });
-    copyBtn.title = "\uD074\uB77C\uC6B0\uB4DC URL \uBCF5\uC0AC";
-    copyBtn.addEventListener("click", (evt) => {
-      evt.stopPropagation();
-      void navigator.clipboard.writeText(entry.url);
-      new import_obsidian6.Notice("URL\uC744 \uBCF5\uC0AC\uD588\uC2B5\uB2C8\uB2E4.");
-    });
-    if (entry.sourceNote) {
-      const noteBtn = actions.createEl("button", { text: "\uB178\uD2B8" });
-      noteBtn.title = `\uC6D0\uBCF8 \uB178\uD2B8 \uC5F4\uAE30: ${entry.sourceNote}`;
-      noteBtn.addEventListener("click", (evt) => {
-        evt.stopPropagation();
-        void this.app.workspace.openLinkText(entry.sourceNote, "", false);
-      });
-    }
-    const usageBtn = actions.createEl("button", { text: "\uC0AC\uC6A9\uCC98" });
-    usageBtn.title = "\uC774 \uC774\uBBF8\uC9C0\uB97C \uC0AC\uC6A9 \uC911\uC778 \uB178\uD2B8 \uCC3E\uAE30 (\uBCFC\uD2B8 \uC804\uCCB4 \uAC80\uC0C9)";
-    usageBtn.addEventListener("click", (evt) => {
-      evt.stopPropagation();
-      usageBtn.disabled = true;
-      void this.findUsages(entry).finally(() => {
-        usageBtn.disabled = false;
-      });
-    });
-    card.addEventListener("click", () => this.insertEntry(entry));
+  const active = app.workspace.getActiveViewOfType(import_obsidian6.MarkdownView);
+  if (active)
+    return active;
+  for (const leaf of leaves) {
+    if (leaf.view instanceof import_obsidian6.MarkdownView)
+      return leaf.view;
   }
-  /** URL(클라우드 링크) + 위키링크(로컬 백업) 사용처를 볼트 전체에서 검색 */
-  async findUsages(entry) {
-    const usages = /* @__PURE__ */ new Set();
-    if (entry.localPath) {
-      for (const [mdPath, links] of Object.entries(this.app.metadataCache.resolvedLinks)) {
-        if (links[entry.localPath])
-          usages.add(mdPath);
-      }
-    }
-    if (entry.url) {
-      for (const md of this.app.vault.getMarkdownFiles()) {
-        if (usages.has(md.path))
-          continue;
-        const content = await this.app.vault.cachedRead(md);
-        if (content.includes(entry.url))
-          usages.add(md.path);
-      }
-    }
-    if (usages.size === 0) {
-      new import_obsidian6.Notice("\uC774 \uC774\uBBF8\uC9C0\uB97C \uC0AC\uC6A9\uD558\uB294 \uB178\uD2B8\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.");
-      return;
-    }
-    const list = [...usages];
-    const preview = list.slice(0, 5).join("\n");
-    const more = list.length > 5 ? `
-\uC678 ${list.length - 5}\uAC1C` : "";
-    new import_obsidian6.Notice(`\uC0AC\uC6A9 \uC911\uC778 \uB178\uD2B8 ${list.length}\uAC1C:
-${preview}${more}`, 1e4);
-    if (list.length === 1) {
-      void this.app.workspace.openLinkText(list[0], "", false);
-    }
+  return null;
+}
+function insertAtEditor(app, text) {
+  var _a, _b;
+  const view = findTargetMarkdownView(app);
+  if (!view) {
+    new import_obsidian6.Notice("\uC774\uBBF8\uC9C0\uB97C \uC0BD\uC785\uD560 \uB9C8\uD06C\uB2E4\uC6B4 \uB178\uD2B8\uB97C \uBA3C\uC800 \uC5F4\uC5B4\uC8FC\uC138\uC694.");
+    return false;
   }
-  insertEntry(entry) {
-    var _a;
-    const editor = (_a = this.app.workspace.activeEditor) == null ? void 0 : _a.editor;
-    if (!editor) {
-      new import_obsidian6.Notice("\uC774\uBBF8\uC9C0\uB97C \uC0BD\uC785\uD560 \uD65C\uC131 \uC5D0\uB514\uD130\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4. \uB178\uD2B8\uB97C \uBA3C\uC800 \uC5EC\uC138\uC694.");
-      return;
-    }
-    if (entry.status !== "uploaded") {
-      new import_obsidian6.Notice("\uC544\uC9C1 \uC5C5\uB85C\uB4DC\uB418\uC9C0 \uC54A\uC740 \uC774\uBBF8\uC9C0\uC785\uB2C8\uB2E4. '\uC2E4\uD328\uD55C \uC5C5\uB85C\uB4DC \uC7AC\uC2DC\uB3C4'\uB97C \uBA3C\uC800 \uC2E4\uD589\uD558\uC138\uC694.");
-      return;
-    }
-    editor.replaceSelection(`![${stemOf(this.entryName(entry))}](${entry.url})`);
-  }
-};
+  const editor = view.editor;
+  editor.replaceRange(text, editor.getCursor());
+  new import_obsidian6.Notice(`${(_b = (_a = view.file) == null ? void 0 : _a.basename) != null ? _b : "\uB178\uD2B8"}\uC5D0 \uC0BD\uC785\uD588\uC2B5\uB2C8\uB2E4.`);
+  return true;
+}
+
+// src/preview-modal.ts
+var import_obsidian9 = require("obsidian");
 
 // src/commands.ts
 var import_obsidian8 = require("obsidian");
@@ -1686,6 +1508,25 @@ async function runRetryCommand(plugin) {
   }
   new import_obsidian8.Notice(msg, 8e3);
 }
+async function findImageUsages(app, entry) {
+  const usages = /* @__PURE__ */ new Set();
+  if (entry.localPath) {
+    for (const [mdPath, links] of Object.entries(app.metadataCache.resolvedLinks)) {
+      if (links[entry.localPath])
+        usages.add(mdPath);
+    }
+  }
+  if (entry.url) {
+    for (const md of app.vault.getMarkdownFiles()) {
+      if (usages.has(md.path))
+        continue;
+      const content = await app.vault.cachedRead(md);
+      if (content.includes(entry.url))
+        usages.add(md.path);
+    }
+  }
+  return [...usages];
+}
 async function collectUnusedInput(plugin) {
   const { app } = plugin;
   const entries = plugin.manifestStore.all();
@@ -1763,8 +1604,348 @@ async function runTrashUnusedCommand(plugin) {
   new TrashSelectModal(plugin.app, plugin, candidates).open();
 }
 
+// src/preview-modal.ts
+var STATUS_LABEL = {
+  uploaded: "\uC5C5\uB85C\uB4DC\uB428",
+  pending: "\uB300\uAE30 \uC911",
+  failed: "\uC2E4\uD328"
+};
+var ImagePreviewModal = class extends import_obsidian9.Modal {
+  constructor(app, plugin, entry) {
+    super(app);
+    this.plugin = plugin;
+    this.entry = entry;
+  }
+  entryName() {
+    var _a;
+    const path = (_a = this.entry.localPath) != null ? _a : this.entry.r2Key;
+    const i = path.lastIndexOf("/");
+    return i >= 0 ? path.slice(i + 1) : path;
+  }
+  onOpen() {
+    var _a;
+    this.modalEl.addClass("a4p-img-preview-host");
+    const { contentEl } = this;
+    contentEl.empty();
+    contentEl.addClass("a4p-img-preview");
+    const entry = this.entry;
+    const name = this.entryName();
+    const imgWrap = contentEl.createDiv({ cls: "a4p-img-preview-imgwrap" });
+    const img = imgWrap.createEl("img");
+    const local = entry.localPath ? this.app.vault.getAbstractFileByPath(entry.localPath) : null;
+    img.src = local instanceof import_obsidian9.TFile ? this.app.vault.getResourcePath(local) : entry.url;
+    img.alt = name;
+    const meta = contentEl.createDiv({ cls: "a4p-img-preview-meta" });
+    meta.createDiv({ cls: "a4p-img-preview-name", text: name });
+    const subEl = meta.createDiv({ cls: "a4p-img-preview-sub" });
+    const dateStr = new Date(entry.createdAt).toLocaleString("ko-KR", {
+      dateStyle: "medium",
+      timeStyle: "short"
+    });
+    subEl.setText(`${formatBytes(entry.size)} \xB7 ${(_a = STATUS_LABEL[entry.status]) != null ? _a : entry.status} \xB7 ${dateStr}`);
+    img.addEventListener("load", () => {
+      var _a2;
+      if (img.naturalWidth) {
+        subEl.setText(
+          `${formatBytes(entry.size)} \xB7 ${img.naturalWidth}\xD7${img.naturalHeight} \xB7 ${(_a2 = STATUS_LABEL[entry.status]) != null ? _a2 : entry.status} \xB7 ${dateStr}`
+        );
+      }
+    });
+    if (entry.sourceNote) {
+      const noteRow = meta.createDiv({ cls: "a4p-img-preview-row" });
+      (0, import_obsidian9.setIcon)(noteRow.createSpan({ cls: "a4p-img-preview-row-icon" }), "file-text");
+      const noteLink = noteRow.createEl("a", { text: entry.sourceNote, cls: "a4p-img-preview-link" });
+      noteLink.addEventListener("click", (evt) => {
+        evt.preventDefault();
+        this.close();
+        void this.app.workspace.openLinkText(entry.sourceNote, "", false);
+      });
+    }
+    if (entry.status === "uploaded") {
+      const urlRow = meta.createDiv({ cls: "a4p-img-preview-row" });
+      (0, import_obsidian9.setIcon)(urlRow.createSpan({ cls: "a4p-img-preview-row-icon" }), "link");
+      urlRow.createSpan({ cls: "a4p-img-preview-url", text: entry.url });
+    }
+    const actions = contentEl.createDiv({ cls: "a4p-img-preview-actions" });
+    this.actionButton(actions, "plus", "\uC5D0\uB514\uD130\uC5D0 \uC0BD\uC785", true, () => {
+      if (entry.status !== "uploaded") {
+        new import_obsidian9.Notice("\uC544\uC9C1 \uC5C5\uB85C\uB4DC\uB418\uC9C0 \uC54A\uC740 \uC774\uBBF8\uC9C0\uC785\uB2C8\uB2E4. '\uC2E4\uD328\uD55C \uC5C5\uB85C\uB4DC \uC7AC\uC2DC\uB3C4'\uB97C \uBA3C\uC800 \uC2E4\uD589\uD558\uC138\uC694.");
+        return;
+      }
+      if (insertAtEditor(this.app, `![${stemOf(name)}](${entry.url})`))
+        this.close();
+    });
+    this.actionButton(actions, "copy", "URL \uBCF5\uC0AC", false, () => {
+      void navigator.clipboard.writeText(entry.url);
+      new import_obsidian9.Notice("URL\uC744 \uBCF5\uC0AC\uD588\uC2B5\uB2C8\uB2E4.");
+    });
+    if (entry.sourceNote) {
+      this.actionButton(actions, "file-text", "\uB178\uD2B8 \uC5F4\uAE30", false, () => {
+        this.close();
+        void this.app.workspace.openLinkText(entry.sourceNote, "", false);
+      });
+    }
+    if (entry.status === "uploaded" && import_obsidian9.Platform.isDesktopApp) {
+      this.actionButton(actions, "external-link", "\uBE0C\uB77C\uC6B0\uC800\uC5D0\uC11C \uC5F4\uAE30", false, () => {
+        window.open(entry.url);
+      });
+    }
+    this.actionButton(actions, "search", "\uC0AC\uC6A9\uCC98 \uAC80\uC0C9", false, async (btn) => {
+      btn.disabled = true;
+      (0, import_obsidian9.setIcon)(btn.querySelector(".a4p-img-btn-icon"), "loader-2");
+      try {
+        const usages = await findImageUsages(this.app, this.entry);
+        this.renderUsages(contentEl, usages);
+      } finally {
+        btn.disabled = false;
+        (0, import_obsidian9.setIcon)(btn.querySelector(".a4p-img-btn-icon"), "search");
+      }
+    });
+  }
+  actionButton(parent, icon, label, cta, onClick) {
+    const btn = parent.createEl("button", { cls: "a4p-img-btn" });
+    if (cta)
+      btn.addClass("mod-cta");
+    (0, import_obsidian9.setIcon)(btn.createSpan({ cls: "a4p-img-btn-icon" }), icon);
+    btn.createSpan({ text: label });
+    btn.addEventListener("click", () => void onClick(btn));
+  }
+  renderUsages(parent, usages) {
+    var _a;
+    (_a = parent.querySelector(".a4p-img-preview-usages")) == null ? void 0 : _a.remove();
+    const box = parent.createDiv({ cls: "a4p-img-preview-usages" });
+    if (usages.length === 0) {
+      box.createDiv({ cls: "a4p-img-preview-sub", text: "\uC774 \uC774\uBBF8\uC9C0\uB97C \uC0AC\uC6A9\uD558\uB294 \uB178\uD2B8\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4." });
+      return;
+    }
+    box.createDiv({ cls: "a4p-img-preview-usages-title", text: `\uC0AC\uC6A9 \uC911\uC778 \uB178\uD2B8 ${usages.length}\uAC1C` });
+    for (const path of usages) {
+      const row = box.createDiv({ cls: "a4p-img-preview-row" });
+      (0, import_obsidian9.setIcon)(row.createSpan({ cls: "a4p-img-preview-row-icon" }), "file-text");
+      const link = row.createEl("a", { text: path, cls: "a4p-img-preview-link" });
+      link.addEventListener("click", (evt) => {
+        evt.preventDefault();
+        this.close();
+        void this.app.workspace.openLinkText(path, "", false);
+      });
+    }
+  }
+  onClose() {
+    this.contentEl.empty();
+  }
+};
+
+// src/gallery-view.ts
+var VIEW_TYPE_A4P_IMAGE_GALLERY = "a4p-image-gallery-view";
+var DEBOUNCE_MS = 150;
+var GalleryView = class extends import_obsidian10.ItemView {
+  constructor(leaf, plugin) {
+    super(leaf);
+    this.gridEl = null;
+    this.statsEl = null;
+    this.query = "";
+    this.statusFilter = "all";
+    this.dateFilter = "all";
+    this.groupByNote = false;
+    this.debounceTimer = null;
+    this.plugin = plugin;
+  }
+  getViewType() {
+    return VIEW_TYPE_A4P_IMAGE_GALLERY;
+  }
+  getDisplayText() {
+    return "A4P \uC774\uBBF8\uC9C0 \uAC24\uB7EC\uB9AC";
+  }
+  getIcon() {
+    return "image";
+  }
+  async onOpen() {
+    const root = this.containerEl.children[1];
+    root.empty();
+    root.addClass("a4p-img-panel");
+    const searchRow = root.createDiv({ cls: "a4p-img-search-row" });
+    const input = searchRow.createEl("input", {
+      type: "text",
+      placeholder: "\uD30C\uC77C\uBA85\xB7\uB178\uD2B8 \uAC80\uC0C9\u2026",
+      cls: "a4p-img-search-input"
+    });
+    input.addEventListener("input", () => {
+      if (this.debounceTimer !== null)
+        window.clearTimeout(this.debounceTimer);
+      this.debounceTimer = window.setTimeout(() => {
+        this.query = input.value.trim().toLowerCase();
+        this.renderGrid();
+      }, DEBOUNCE_MS);
+    });
+    const refreshBtn = searchRow.createEl("button", { cls: "a4p-img-icon-btn" });
+    refreshBtn.title = "\uC0C8\uB85C\uACE0\uCE68";
+    (0, import_obsidian10.setIcon)(refreshBtn, "refresh-cw");
+    refreshBtn.addEventListener("click", () => this.renderGrid());
+    const filterRow = root.createDiv({ cls: "a4p-img-filter-row" });
+    const statusSelect = filterRow.createEl("select", { cls: "dropdown a4p-img-select" });
+    for (const [value, label] of [
+      ["all", "\uC804\uCCB4 \uC0C1\uD0DC"],
+      ["uploaded", "\uC5C5\uB85C\uB4DC\uB428"],
+      ["pending", "\uB300\uAE30"],
+      ["failed", "\uC2E4\uD328"]
+    ]) {
+      const opt = statusSelect.createEl("option", { text: label });
+      opt.value = value;
+    }
+    statusSelect.addEventListener("change", () => {
+      this.statusFilter = statusSelect.value;
+      this.renderGrid();
+    });
+    const dateSelect = filterRow.createEl("select", { cls: "dropdown a4p-img-select" });
+    for (const [value, label] of [
+      ["all", "\uC804\uCCB4 \uAE30\uAC04"],
+      ["7", "\uCD5C\uADFC 7\uC77C"],
+      ["30", "\uCD5C\uADFC 30\uC77C"]
+    ]) {
+      const opt = dateSelect.createEl("option", { text: label });
+      opt.value = value;
+    }
+    dateSelect.addEventListener("change", () => {
+      this.dateFilter = dateSelect.value;
+      this.renderGrid();
+    });
+    const groupBtn = filterRow.createEl("button", { cls: "a4p-img-chip" });
+    (0, import_obsidian10.setIcon)(groupBtn.createSpan({ cls: "a4p-img-chip-icon" }), "folder-tree");
+    groupBtn.createSpan({ text: "\uB178\uD2B8\uBCC4" });
+    groupBtn.title = "\uB178\uD2B8\uBCC4 \uADF8\uB8F9 \uBCF4\uAE30 \uC804\uD658";
+    groupBtn.addEventListener("click", () => {
+      this.groupByNote = !this.groupByNote;
+      groupBtn.toggleClass("is-active", this.groupByNote);
+      this.renderGrid();
+    });
+    this.statsEl = root.createDiv({ cls: "a4p-img-stats" });
+    const scroller = root.createDiv({ cls: "a4p-img-scroller" });
+    this.gridEl = scroller.createDiv({ cls: "a4p-img-grid" });
+    this.renderGrid();
+  }
+  async onClose() {
+    if (this.debounceTimer !== null)
+      window.clearTimeout(this.debounceTimer);
+  }
+  entryName(entry) {
+    var _a;
+    const path = (_a = entry.localPath) != null ? _a : entry.r2Key;
+    const i = path.lastIndexOf("/");
+    return i >= 0 ? path.slice(i + 1) : path;
+  }
+  renderGrid() {
+    var _a, _b;
+    if (!this.gridEl)
+      return;
+    this.gridEl.empty();
+    const allEntries = this.plugin.manifestStore.all();
+    let entries = [...allEntries].sort((a, b) => b.createdAt - a.createdAt);
+    if (this.statusFilter !== "all")
+      entries = entries.filter((e) => e.status === this.statusFilter);
+    if (this.dateFilter !== "all") {
+      const cutoff = Date.now() - parseInt(this.dateFilter, 10) * 24 * 60 * 60 * 1e3;
+      entries = entries.filter((e) => e.createdAt >= cutoff);
+    }
+    if (this.query) {
+      entries = entries.filter((e) => {
+        var _a2;
+        const haystack = `${this.entryName(e)} ${(_a2 = e.sourceNote) != null ? _a2 : ""}`.toLowerCase();
+        return haystack.includes(this.query);
+      });
+    }
+    const filteredSize = entries.reduce((sum, e) => sum + e.size, 0);
+    const uploadedSize = allEntries.filter((e) => e.status === "uploaded").reduce((sum, e) => sum + e.size, 0);
+    const pctOfFree = (uploadedSize / (10 * 1024 * 1024 * 1024) * 100).toFixed(2);
+    if (this.statsEl) {
+      this.statsEl.empty();
+      this.statsEl.createSpan({ cls: "a4p-img-stats-strong", text: `${entries.length}\uAC1C \xB7 ${formatBytes(filteredSize)}` });
+      this.statsEl.createSpan({ text: ` \u2014 R2 \uC0AC\uC6A9\uB7C9 ${formatBytes(uploadedSize)} (10GB\uC758 ${pctOfFree}%)` });
+    }
+    if (entries.length === 0) {
+      const empty = this.gridEl.createDiv({ cls: "a4p-img-empty" });
+      (0, import_obsidian10.setIcon)(empty.createDiv({ cls: "a4p-img-empty-icon" }), "image-off");
+      empty.createDiv({ text: "\uD45C\uC2DC\uD560 \uC774\uBBF8\uC9C0\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4." });
+      return;
+    }
+    if (this.groupByNote) {
+      const groups = /* @__PURE__ */ new Map();
+      for (const entry of entries) {
+        const key = (_a = entry.sourceNote) != null ? _a : "(\uB178\uD2B8 \uBBF8\uC9C0\uC815)";
+        const list = (_b = groups.get(key)) != null ? _b : [];
+        list.push(entry);
+        groups.set(key, list);
+      }
+      for (const [note, groupEntries] of groups) {
+        const header = this.gridEl.createDiv({ cls: "a4p-img-group" });
+        (0, import_obsidian10.setIcon)(header.createSpan({ cls: "a4p-img-group-icon" }), "file-text");
+        header.createSpan({ text: noteBasename(note) });
+        header.createSpan({ cls: "a4p-img-group-count", text: String(groupEntries.length) });
+        header.title = note;
+        const groupGrid = this.gridEl.createDiv({ cls: "a4p-img-grid-inner" });
+        for (const entry of groupEntries)
+          this.renderCard(groupGrid, entry);
+      }
+    } else {
+      for (const entry of entries) {
+        this.renderCard(this.gridEl, entry);
+      }
+    }
+  }
+  renderCard(parent, entry) {
+    var _a;
+    const name = this.entryName(entry);
+    const card = parent.createDiv({ cls: "a4p-img-card" });
+    const thumbWrap = card.createDiv({ cls: "a4p-img-thumbwrap" });
+    const img = thumbWrap.createEl("img", { cls: "a4p-img-thumb" });
+    img.loading = "lazy";
+    const local = entry.localPath ? this.app.vault.getAbstractFileByPath(entry.localPath) : null;
+    img.src = local instanceof import_obsidian10.TFile ? this.app.vault.getResourcePath(local) : entry.url;
+    img.alt = name;
+    if (entry.status !== "uploaded") {
+      thumbWrap.createDiv({
+        cls: `a4p-img-badge ${entry.status}`,
+        text: entry.status === "failed" ? "\uC2E4\uD328" : "\uB300\uAE30"
+      });
+    }
+    const quick = thumbWrap.createDiv({ cls: "a4p-img-quick" });
+    const insertBtn = quick.createEl("button", { cls: "a4p-img-quick-btn" });
+    insertBtn.title = "\uC5D0\uB514\uD130\uC5D0 \uC0BD\uC785";
+    (0, import_obsidian10.setIcon)(insertBtn, "plus");
+    insertBtn.addEventListener("click", (evt) => {
+      evt.stopPropagation();
+      if (entry.status !== "uploaded") {
+        new import_obsidian10.Notice("\uC544\uC9C1 \uC5C5\uB85C\uB4DC\uB418\uC9C0 \uC54A\uC740 \uC774\uBBF8\uC9C0\uC785\uB2C8\uB2E4.");
+        return;
+      }
+      insertAtEditor(this.app, `![${stemOf(name)}](${entry.url})`);
+    });
+    const copyBtn = quick.createEl("button", { cls: "a4p-img-quick-btn" });
+    copyBtn.title = "URL \uBCF5\uC0AC";
+    (0, import_obsidian10.setIcon)(copyBtn, "copy");
+    copyBtn.addEventListener("click", (evt) => {
+      evt.stopPropagation();
+      void navigator.clipboard.writeText(entry.url);
+      new import_obsidian10.Notice("URL\uC744 \uBCF5\uC0AC\uD588\uC2B5\uB2C8\uB2E4.");
+    });
+    const meta = card.createDiv({ cls: "a4p-img-card-meta" });
+    meta.createDiv({ cls: "a4p-img-card-name", text: name });
+    meta.createDiv({ cls: "a4p-img-card-sub", text: formatBytes(entry.size) });
+    meta.title = `${name}
+${(_a = entry.localPath) != null ? _a : "(\uB85C\uCEEC \uBC31\uC5C5 \uC5C6\uC74C)"}
+${entry.url}`;
+    card.addEventListener("click", () => {
+      new ImagePreviewModal(this.app, this.plugin, entry).open();
+    });
+  }
+};
+function noteBasename(path) {
+  var _a;
+  const name = (_a = path.split("/").pop()) != null ? _a : path;
+  return name.replace(/\.md$/i, "");
+}
+
 // src/migrate-modal.ts
-var import_obsidian9 = require("obsidian");
+var import_obsidian11 = require("obsidian");
 
 // src/migrate.ts
 function normalizeBase(url) {
@@ -1780,7 +1961,7 @@ function replaceUrlPrefix(content, oldBase, newBase) {
 }
 
 // src/migrate-modal.ts
-var MigrateUrlModal = class extends import_obsidian9.Modal {
+var MigrateUrlModal = class extends import_obsidian11.Modal {
   constructor(app, plugin) {
     super(app);
     this.plugin = plugin;
@@ -1805,13 +1986,13 @@ var MigrateUrlModal = class extends import_obsidian9.Modal {
       cls: "a4p-image-settings-status-line",
       text: "\uBCFC\uD2B8 \uC804\uCCB4 \uB178\uD2B8\uC5D0\uC11C '\uC61B \uC8FC\uC18C'\uB85C \uC2DC\uC791\uD558\uB294 \uB9C1\uD06C\uB97C '\uC0C8 \uC8FC\uC18C'\uB85C \uBC14\uAFC9\uB2C8\uB2E4. \uCEE4\uC2A4\uD140 \uB3C4\uBA54\uC778 \uC804\uD658\uC774\uB098 \uC798\uBABB \uC785\uB825\uB41C \uC8FC\uC18C \uBCF5\uAD6C\uC5D0 \uC0AC\uC6A9\uD558\uC138\uC694. \uBA3C\uC800 \uC2A4\uCE94\uC73C\uB85C \uB300\uC0C1\uC744 \uD655\uC778\uD574\uC57C \uC2E4\uD589\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4."
     });
-    new import_obsidian9.Setting(contentEl).setName("\uC61B \uC8FC\uC18C (base URL)").addText(
+    new import_obsidian11.Setting(contentEl).setName("\uC61B \uC8FC\uC18C (base URL)").addText(
       (text) => text.setPlaceholder("https://pub-xxxx.r2.dev").setValue(this.oldBase).onChange((v) => {
         this.oldBase = v;
         this.invalidateScan();
       })
     );
-    new import_obsidian9.Setting(contentEl).setName("\uC0C8 \uC8FC\uC18C (base URL)").addText(
+    new import_obsidian11.Setting(contentEl).setName("\uC0C8 \uC8FC\uC18C (base URL)").addText(
       (text) => text.setPlaceholder("https://img.example.com").setValue(this.newBase).onChange((v) => {
         this.newBase = v;
         this.invalidateScan();
@@ -1844,7 +2025,7 @@ var MigrateUrlModal = class extends import_obsidian9.Modal {
   async scan() {
     const error = this.validate();
     if (error) {
-      new import_obsidian9.Notice(error);
+      new import_obsidian11.Notice(error);
       return;
     }
     this.statusEl.empty();
@@ -1900,7 +2081,7 @@ var MigrateUrlModal = class extends import_obsidian9.Modal {
       }
     }
     this.close();
-    new import_obsidian9.Notice(
+    new import_obsidian11.Notice(
       `\uC8FC\uC18C \uBCC0\uACBD \uC644\uB8CC \u2014 \uB178\uD2B8 ${this.scanResult.files.length}\uAC1C\uC5D0\uC11C \uB9C1\uD06C ${replaced}\uAC74, \uB9E4\uB2C8\uD398\uC2A4\uD2B8 ${manifestFixed}\uAC74 \uAC31\uC2E0.`,
       8e3
     );
@@ -1911,7 +2092,7 @@ var MigrateUrlModal = class extends import_obsidian9.Modal {
 };
 
 // src/eagle/client.ts
-var import_obsidian10 = require("obsidian");
+var import_obsidian12 = require("obsidian");
 var EagleClient = class {
   constructor(getBaseUrl) {
     this.getBaseUrl = getBaseUrl;
@@ -1921,7 +2102,7 @@ var EagleClient = class {
   }
   async get(endpoint) {
     try {
-      const res = await (0, import_obsidian10.requestUrl)({ url: `${this.base()}${endpoint}`, method: "GET", throw: false });
+      const res = await (0, import_obsidian12.requestUrl)({ url: `${this.base()}${endpoint}`, method: "GET", throw: false });
       if (res.status !== 200)
         return null;
       const body = res.json;
@@ -1932,7 +2113,7 @@ var EagleClient = class {
   }
   async post(endpoint, payload) {
     try {
-      const res = await (0, import_obsidian10.requestUrl)({
+      const res = await (0, import_obsidian12.requestUrl)({
         url: `${this.base()}${endpoint}`,
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1988,8 +2169,8 @@ var EagleClient = class {
 };
 
 // src/eagle/modal.ts
-var import_obsidian11 = require("obsidian");
-var EagleSearchModal = class _EagleSearchModal extends import_obsidian11.FuzzySuggestModal {
+var import_obsidian13 = require("obsidian");
+var EagleSearchModal = class _EagleSearchModal extends import_obsidian13.FuzzySuggestModal {
   constructor(app, plugin, editor, sourceNote, items, libraryPath) {
     super(app);
     this.plugin = plugin;
@@ -2002,16 +2183,16 @@ var EagleSearchModal = class _EagleSearchModal extends import_obsidian11.FuzzySu
   static async open(plugin, editor, sourceNote) {
     const client = plugin.eagle;
     if (!await client.isAvailable()) {
-      new import_obsidian11.Notice("Eagle \uC571\uC774 \uC2E4\uD589 \uC911\uC774 \uC544\uB2D9\uB2C8\uB2E4. Eagle\uC744 \uBA3C\uC800 \uC2E4\uD589\uD558\uC138\uC694.");
+      new import_obsidian13.Notice("Eagle \uC571\uC774 \uC2E4\uD589 \uC911\uC774 \uC544\uB2D9\uB2C8\uB2E4. Eagle\uC744 \uBA3C\uC800 \uC2E4\uD589\uD558\uC138\uC694.");
       return;
     }
     const [items, libraryPath] = await Promise.all([client.searchImages(), client.libraryPath()]);
     if (!libraryPath) {
-      new import_obsidian11.Notice("Eagle \uB77C\uC774\uBE0C\uB7EC\uB9AC \uACBD\uB85C\uB97C \uAC00\uC838\uC624\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4.");
+      new import_obsidian13.Notice("Eagle \uB77C\uC774\uBE0C\uB7EC\uB9AC \uACBD\uB85C\uB97C \uAC00\uC838\uC624\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4.");
       return;
     }
     if (items.length === 0) {
-      new import_obsidian11.Notice("Eagle \uB77C\uC774\uBE0C\uB7EC\uB9AC\uC5D0 \uC774\uBBF8\uC9C0\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.");
+      new import_obsidian13.Notice("Eagle \uB77C\uC774\uBE0C\uB7EC\uB9AC\uC5D0 \uC774\uBBF8\uC9C0\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.");
       return;
     }
     new _EagleSearchModal(plugin.app, plugin, editor, sourceNote, items, libraryPath).open();
@@ -2050,10 +2231,10 @@ var EagleSearchModal = class _EagleSearchModal extends import_obsidian11.FuzzySu
     const filePath = this.plugin.eagle.itemFilePath(this.libraryPath, item);
     const buf = readLocalFile(filePath);
     if (!buf) {
-      new import_obsidian11.Notice(`Eagle \uC6D0\uBCF8 \uD30C\uC77C\uC744 \uC77D\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4: ${filePath}`);
+      new import_obsidian13.Notice(`Eagle \uC6D0\uBCF8 \uD30C\uC77C\uC744 \uC77D\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4: ${filePath}`);
       return;
     }
-    const notice = new import_obsidian11.Notice(`Eagle \uC774\uBBF8\uC9C0 \uC5C5\uB85C\uB4DC \uC911: ${item.name}\u2026`, 0);
+    const notice = new import_obsidian13.Notice(`Eagle \uC774\uBBF8\uC9C0 \uC5C5\uB85C\uB4DC \uC911: ${item.name}\u2026`, 0);
     try {
       const outcome = await this.plugin.uploader.process(buf, {
         name: `${item.name}.${item.ext}`,
@@ -2069,13 +2250,13 @@ var EagleSearchModal = class _EagleSearchModal extends import_obsidian11.FuzzySu
           this.plugin.manifestStore.update(entry.id, { eagleId: item.id });
       } else if (outcome.localPath && this.plugin.settings.fallbackToLocalEmbed) {
         this.editor.replaceSelection(`![[${outcome.localPath}]]`);
-        new import_obsidian11.Notice(`\uC5C5\uB85C\uB4DC \uC2E4\uD328 \u2014 \uB85C\uCEEC\uB85C \uC784\uBCA0\uB4DC\uD588\uC2B5\uB2C8\uB2E4. (${outcome.error})`, 8e3);
+        new import_obsidian13.Notice(`\uC5C5\uB85C\uB4DC \uC2E4\uD328 \u2014 \uB85C\uCEEC\uB85C \uC784\uBCA0\uB4DC\uD588\uC2B5\uB2C8\uB2E4. (${outcome.error})`, 8e3);
       } else {
-        new import_obsidian11.Notice(`\uC5C5\uB85C\uB4DC \uC2E4\uD328: ${outcome.error}`, 8e3);
+        new import_obsidian13.Notice(`\uC5C5\uB85C\uB4DC \uC2E4\uD328: ${outcome.error}`, 8e3);
       }
     } catch (e) {
       notice.hide();
-      new import_obsidian11.Notice(`Eagle \uC774\uBBF8\uC9C0 \uCC98\uB9AC \uC2E4\uD328: ${e instanceof Error ? e.message : String(e)}`, 8e3);
+      new import_obsidian13.Notice(`Eagle \uC774\uBBF8\uC9C0 \uCC98\uB9AC \uC2E4\uD328: ${e instanceof Error ? e.message : String(e)}`, 8e3);
     }
   }
 };
@@ -2093,7 +2274,7 @@ function readLocalFile(absPath) {
 }
 
 // src/main.ts
-var A4pImagePlugin = class extends import_obsidian12.Plugin {
+var A4pImagePlugin = class extends import_obsidian14.Plugin {
   async onload() {
     await this.loadState();
     this.r2 = new R2Client(() => this.settings.r2);
@@ -2101,7 +2282,7 @@ var A4pImagePlugin = class extends import_obsidian12.Plugin {
     await this.manifestStore.load();
     this.uploader = new Uploader(this);
     this.eagle = new EagleClient(() => this.settings.eagle.apiUrl);
-    if (import_obsidian12.Platform.isDesktopApp) {
+    if (import_obsidian14.Platform.isDesktopApp) {
       this.uploader.onUploaded = async (entry) => {
         var _a;
         const { enabled, registerOnUpload, folderId } = this.settings.eagle;
@@ -2110,7 +2291,7 @@ var A4pImagePlugin = class extends import_obsidian12.Plugin {
         if (!await this.eagle.isAvailable())
           return;
         const adapter = this.app.vault.adapter;
-        if (!(adapter instanceof import_obsidian12.FileSystemAdapter))
+        if (!(adapter instanceof import_obsidian14.FileSystemAdapter))
           return;
         const absPath = adapter.getFullPath(entry.localPath);
         const name = (_a = entry.localPath.split("/").pop()) != null ? _a : entry.localPath;
@@ -2119,15 +2300,16 @@ var A4pImagePlugin = class extends import_obsidian12.Plugin {
     }
     this.addSettingTab(new A4pImageSettingTab(this.app, this));
     registerPasteHandlers(this);
+    registerEditorTracker(this);
     this.registerEvent(
       this.app.vault.on("rename", (file, oldPath) => {
-        if (file instanceof import_obsidian12.TFile)
+        if (file instanceof import_obsidian14.TFile)
           this.manifestStore.handleRename(oldPath, file.path);
       })
     );
     this.registerEvent(
       this.app.vault.on("delete", (file) => {
-        if (file instanceof import_obsidian12.TFile)
+        if (file instanceof import_obsidian14.TFile)
           this.manifestStore.handleDelete(file.path);
       })
     );
@@ -2151,7 +2333,7 @@ var A4pImagePlugin = class extends import_obsidian12.Plugin {
       editorCallback: (_editor, ctx) => {
         const file = ctx.file;
         if (!file) {
-          new import_obsidian12.Notice("\uD65C\uC131 \uB178\uD2B8\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.");
+          new import_obsidian14.Notice("\uD65C\uC131 \uB178\uD2B8\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.");
           return;
         }
         void openConvertModal(this, [file], `\uD604\uC7AC \uB178\uD2B8: ${file.basename}`);
@@ -2179,7 +2361,7 @@ var A4pImagePlugin = class extends import_obsidian12.Plugin {
       name: "\uBBF8\uC0AC\uC6A9 \uC774\uBBF8\uC9C0 \uD734\uC9C0\uD1B5 \uC774\uB3D9 (\uC120\uD0DD\xB7\uC2B9\uC778 \uD544\uC694)",
       callback: () => void runTrashUnusedCommand(this)
     });
-    if (import_obsidian12.Platform.isDesktopApp) {
+    if (import_obsidian14.Platform.isDesktopApp) {
       this.addCommand({
         id: "eagle-search-insert",
         name: "Eagle\uC5D0\uC11C \uC774\uBBF8\uC9C0 \uAC80\uC0C9\xB7\uC0BD\uC785",
@@ -2211,7 +2393,7 @@ var A4pImagePlugin = class extends import_obsidian12.Plugin {
     void workspace.revealLeaf(leaf);
   }
   createManifestIO() {
-    const indexPath = (0, import_obsidian12.normalizePath)(`${this.manifest.dir}/index.json`);
+    const indexPath = (0, import_obsidian14.normalizePath)(`${this.manifest.dir}/index.json`);
     const adapter = this.app.vault.adapter;
     return {
       read: async () => {
