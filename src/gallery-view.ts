@@ -1,4 +1,4 @@
-import { ItemView, Notice, TFile, WorkspaceLeaf, setIcon } from "obsidian";
+import { AbstractInputSuggest, App, ItemView, Notice, TFile, WorkspaceLeaf, setIcon } from "obsidian";
 import type A4pImagePlugin from "./main";
 import type { EntryStatus, ManifestEntry } from "./types";
 import { formatBytes } from "./convert";
@@ -45,20 +45,34 @@ export class GalleryView extends ItemView {
     root.empty();
     root.addClass("a4p-img-panel");
 
-    // ── 검색줄: 입력 + 새로고침 ──
+    // ── 검색줄: 아이콘 + 입력(자동완성) + 지우기 + 새로고침 ──
     const searchRow = root.createDiv({ cls: "a4p-img-search-row" });
-    const input = searchRow.createEl("input", {
+    const inputWrap = searchRow.createDiv({ cls: "a4p-img-input-wrap" });
+    setIcon(inputWrap.createSpan({ cls: "a4p-img-input-icon" }), "search");
+    const input = inputWrap.createEl("input", {
       type: "text",
       placeholder: "파일명·노트 검색…",
       cls: "a4p-img-search-input",
     });
+    const clearBtn = inputWrap.createSpan({ cls: "a4p-img-input-clear" });
+    setIcon(clearBtn, "x");
+
+    const applyQuery = (value: string) => {
+      this.query = value.trim().toLowerCase();
+      inputWrap.toggleClass("has-value", value.length > 0);
+      this.renderGrid();
+    };
     input.addEventListener("input", () => {
+      inputWrap.toggleClass("has-value", input.value.length > 0);
       if (this.debounceTimer !== null) window.clearTimeout(this.debounceTimer);
-      this.debounceTimer = window.setTimeout(() => {
-        this.query = input.value.trim().toLowerCase();
-        this.renderGrid();
-      }, DEBOUNCE_MS);
+      this.debounceTimer = window.setTimeout(() => applyQuery(input.value), DEBOUNCE_MS);
     });
+    clearBtn.addEventListener("click", () => {
+      input.value = "";
+      applyQuery("");
+      input.focus();
+    });
+    new GallerySuggest(this.app, this.plugin, input, (picked) => applyQuery(picked));
 
     const refreshBtn = searchRow.createEl("button", { cls: "a4p-img-icon-btn" });
     refreshBtn.title = "새로고침 (노트별 사용처 재스캔 포함)";
@@ -68,39 +82,39 @@ export class GalleryView extends ItemView {
       this.renderGrid();
     });
 
-    // ── 필터줄: 칩 스타일 ──
-    const filterRow = root.createDiv({ cls: "a4p-img-filter-row" });
+    // ── 필터: 세그먼트 컨트롤 (상태 / 기간) ──
+    const statusRow = root.createDiv({ cls: "a4p-img-filter-row" });
+    this.buildSegmented(
+      statusRow,
+      [
+        ["all", "전체"],
+        ["uploaded", "업로드"],
+        ["pending", "대기"],
+        ["failed", "실패"],
+      ] as const,
+      this.statusFilter,
+      (v) => {
+        this.statusFilter = v;
+        this.renderGrid();
+      },
+    );
 
-    const statusSelect = filterRow.createEl("select", { cls: "dropdown a4p-img-select" });
-    for (const [value, label] of [
-      ["all", "전체 상태"],
-      ["uploaded", "업로드됨"],
-      ["pending", "대기"],
-      ["failed", "실패"],
-    ] as const) {
-      const opt = statusSelect.createEl("option", { text: label });
-      opt.value = value;
-    }
-    statusSelect.addEventListener("change", () => {
-      this.statusFilter = statusSelect.value as "all" | EntryStatus;
-      this.renderGrid();
-    });
+    const dateRow = root.createDiv({ cls: "a4p-img-filter-row" });
+    this.buildSegmented(
+      dateRow,
+      [
+        ["all", "전체 기간"],
+        ["7", "7일"],
+        ["30", "30일"],
+      ] as const,
+      this.dateFilter,
+      (v) => {
+        this.dateFilter = v;
+        this.renderGrid();
+      },
+    );
 
-    const dateSelect = filterRow.createEl("select", { cls: "dropdown a4p-img-select" });
-    for (const [value, label] of [
-      ["all", "전체 기간"],
-      ["7", "최근 7일"],
-      ["30", "최근 30일"],
-    ] as const) {
-      const opt = dateSelect.createEl("option", { text: label });
-      opt.value = value;
-    }
-    dateSelect.addEventListener("change", () => {
-      this.dateFilter = dateSelect.value as "all" | "7" | "30";
-      this.renderGrid();
-    });
-
-    const groupBtn = filterRow.createEl("button", { cls: "a4p-img-chip" });
+    const groupBtn = dateRow.createEl("button", { cls: "a4p-img-chip" });
     setIcon(groupBtn.createSpan({ cls: "a4p-img-chip-icon" }), "folder-tree");
     groupBtn.createSpan({ text: "노트별" });
     groupBtn.title = "노트별 그룹 보기 전환";
@@ -118,6 +132,27 @@ export class GalleryView extends ItemView {
 
   async onClose(): Promise<void> {
     if (this.debounceTimer !== null) window.clearTimeout(this.debounceTimer);
+  }
+
+  /** iOS 스타일 세그먼트 컨트롤 */
+  private buildSegmented<T extends string>(
+    parent: HTMLElement,
+    options: ReadonlyArray<readonly [T, string]>,
+    initial: T,
+    onChange: (value: T) => void,
+  ): void {
+    const box = parent.createDiv({ cls: "a4p-img-seg" });
+    const buttons: HTMLButtonElement[] = [];
+    for (const [value, label] of options) {
+      const btn = box.createEl("button", { cls: "a4p-img-seg-btn", text: label });
+      if (value === initial) btn.addClass("is-active");
+      btn.addEventListener("click", () => {
+        for (const b of buttons) b.removeClass("is-active");
+        btn.addClass("is-active");
+        onChange(value);
+      });
+      buttons.push(btn);
+    }
   }
 
   private entryName(entry: ManifestEntry): string {
@@ -157,7 +192,8 @@ export class GalleryView extends ItemView {
     if (entries.length === 0) {
       const empty = this.gridEl.createDiv({ cls: "a4p-img-empty" });
       setIcon(empty.createDiv({ cls: "a4p-img-empty-icon" }), "image-off");
-      empty.createDiv({ text: "표시할 이미지가 없습니다." });
+      empty.createDiv({ cls: "a4p-img-empty-title", text: "표시할 이미지가 없습니다" });
+      empty.createDiv({ cls: "a4p-img-empty-sub", text: "필터를 바꾸거나 노트에 이미지를 붙여넣어 보세요." });
       return;
     }
 
@@ -186,9 +222,9 @@ export class GalleryView extends ItemView {
           this.renderGrid();
         });
       }
-      const loading = this.gridEl.createDiv({ cls: "a4p-img-empty" });
+      const loading = this.gridEl.createDiv({ cls: "a4p-img-empty is-loading" });
       setIcon(loading.createDiv({ cls: "a4p-img-empty-icon" }), "loader-2");
-      loading.createDiv({ text: "노트별 사용처를 스캔하는 중…" });
+      loading.createDiv({ cls: "a4p-img-empty-title", text: "노트별 사용처를 스캔하는 중…" });
       return;
     }
 
@@ -205,9 +241,8 @@ export class GalleryView extends ItemView {
 
     for (const [note, groupEntries] of groups) {
       const header = this.gridEl.createDiv({ cls: "a4p-img-group" });
-      setIcon(header.createSpan({ cls: "a4p-img-group-icon" }), "file-text");
       header.createSpan({ text: noteBasename(note) });
-      header.createSpan({ cls: "a4p-img-group-count", text: String(groupEntries.length) });
+      header.createSpan({ cls: "a4p-img-group-count", text: `${groupEntries.length}장` });
       header.title = note;
       const groupGrid = this.gridEl.createDiv({ cls: "a4p-img-grid-inner" });
       for (const entry of groupEntries) this.renderCard(groupGrid, entry);
@@ -257,6 +292,7 @@ export class GalleryView extends ItemView {
   private renderCard(parent: HTMLElement, entry: ManifestEntry): void {
     const name = this.entryName(entry);
     const card = parent.createDiv({ cls: "a4p-img-card" });
+    card.title = `${name}\n${entry.localPath ?? "(로컬 백업 없음)"}\n${entry.url}`;
 
     const thumbWrap = card.createDiv({ cls: "a4p-img-thumbwrap" });
     const img = thumbWrap.createEl("img", { cls: "a4p-img-thumb" });
@@ -266,10 +302,8 @@ export class GalleryView extends ItemView {
     img.alt = name;
 
     if (entry.status !== "uploaded") {
-      thumbWrap.createDiv({
-        cls: `a4p-img-badge ${entry.status}`,
-        text: entry.status === "failed" ? "실패" : "대기",
-      });
+      const dot = thumbWrap.createDiv({ cls: `a4p-img-dot ${entry.status}` });
+      dot.title = entry.status === "failed" ? "업로드 실패" : "업로드 대기";
     }
 
     // 호버 시 나타나는 빠른 액션 (삽입 / URL 복사)
@@ -294,10 +328,9 @@ export class GalleryView extends ItemView {
       new Notice("URL을 복사했습니다.");
     });
 
-    const meta = card.createDiv({ cls: "a4p-img-card-meta" });
-    meta.createDiv({ cls: "a4p-img-card-name", text: name });
-    meta.createDiv({ cls: "a4p-img-card-sub", text: formatBytes(entry.size) });
-    meta.title = `${name}\n${entry.localPath ?? "(로컬 백업 없음)"}\n${entry.url}`;
+    const overlay = thumbWrap.createDiv({ cls: "a4p-img-card-overlay" });
+    overlay.createDiv({ cls: "a4p-img-card-name", text: name });
+    overlay.createDiv({ cls: "a4p-img-card-sub", text: formatBytes(entry.size) });
 
     card.addEventListener("click", () => {
       new ImagePreviewModal(this.app, this.plugin, entry).open();
@@ -308,4 +341,62 @@ export class GalleryView extends ItemView {
 function noteBasename(path: string): string {
   const name = path.split("/").pop() ?? path;
   return name.replace(/\.md$/i, "");
+}
+
+/** 검색 자동완성 항목: 매니페스트의 이미지 파일명 + 원본 노트명 */
+interface GallerySuggestion {
+  kind: "file" | "note";
+  label: string;
+}
+
+class GallerySuggest extends AbstractInputSuggest<GallerySuggestion> {
+  constructor(
+    app: App,
+    private plugin: A4pImagePlugin,
+    inputEl: HTMLInputElement,
+    private onPick: (label: string) => void,
+  ) {
+    super(app, inputEl);
+  }
+
+  protected getSuggestions(query: string): GallerySuggestion[] {
+    const q = query.trim().toLowerCase();
+    if (!q) return [];
+
+    const seen = new Set<string>();
+    const files: GallerySuggestion[] = [];
+    const notes: GallerySuggestion[] = [];
+    for (const entry of this.plugin.manifestStore.all()) {
+      const path = entry.localPath ?? entry.r2Key;
+      const i = path.lastIndexOf("/");
+      const name = i >= 0 ? path.slice(i + 1) : path;
+      if (name.toLowerCase().includes(q) && !seen.has(`f:${name}`)) {
+        seen.add(`f:${name}`);
+        files.push({ kind: "file", label: name });
+      }
+      if (entry.sourceNote) {
+        const base = noteBasename(entry.sourceNote);
+        if (base.toLowerCase().includes(q) && !seen.has(`n:${base}`)) {
+          seen.add(`n:${base}`);
+          notes.push({ kind: "note", label: base });
+        }
+      }
+    }
+    // 접두 일치를 부분 일치보다 앞에
+    const rank = (s: GallerySuggestion) => (s.label.toLowerCase().startsWith(q) ? 0 : 1);
+    return [...files, ...notes].sort((a, b) => rank(a) - rank(b)).slice(0, 8);
+  }
+
+  renderSuggestion(value: GallerySuggestion, el: HTMLElement): void {
+    el.addClass("a4p-img-suggest-item");
+    setIcon(el.createSpan({ cls: "a4p-img-suggest-icon" }), value.kind === "file" ? "image" : "file-text");
+    el.createSpan({ cls: "a4p-img-suggest-label", text: value.label });
+    el.createSpan({ cls: "a4p-img-suggest-kind", text: value.kind === "file" ? "이미지" : "노트" });
+  }
+
+  selectSuggestion(value: GallerySuggestion): void {
+    this.setValue(value.label);
+    this.onPick(value.label);
+    this.close();
+  }
 }

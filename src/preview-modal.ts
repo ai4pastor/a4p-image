@@ -36,18 +36,18 @@ export class ImagePreviewModal extends Modal {
     const entry = this.entry;
     const name = this.entryName();
 
-    // ── 큰 이미지 ──
+    // ── 히어로 이미지 (풀블리드) ──
     const imgWrap = contentEl.createDiv({ cls: "a4p-img-preview-imgwrap" });
     const img = imgWrap.createEl("img");
     const local = entry.localPath ? this.app.vault.getAbstractFileByPath(entry.localPath) : null;
     img.src = local instanceof TFile ? this.app.vault.getResourcePath(local) : entry.url;
     img.alt = name;
 
-    // ── 메타 정보 ──
-    const meta = contentEl.createDiv({ cls: "a4p-img-preview-meta" });
-    meta.createDiv({ cls: "a4p-img-preview-name", text: name });
+    // ── 본문: 메타 + 액션 + 사용처 ──
+    const body = contentEl.createDiv({ cls: "a4p-img-preview-body" });
+    body.createDiv({ cls: "a4p-img-preview-name", text: name });
 
-    const subEl = meta.createDiv({ cls: "a4p-img-preview-sub" });
+    const subEl = body.createDiv({ cls: "a4p-img-preview-sub" });
     const dateStr = new Date(entry.createdAt).toLocaleString("ko-KR", {
       dateStyle: "medium",
       timeStyle: "short",
@@ -62,7 +62,7 @@ export class ImagePreviewModal extends Modal {
     });
 
     if (entry.sourceNote) {
-      const noteRow = meta.createDiv({ cls: "a4p-img-preview-row" });
+      const noteRow = body.createDiv({ cls: "a4p-img-preview-row" });
       setIcon(noteRow.createSpan({ cls: "a4p-img-preview-row-icon" }), "file-text");
       const noteLink = noteRow.createEl("a", { text: entry.sourceNote, cls: "a4p-img-preview-link" });
       noteLink.addEventListener("click", (evt) => {
@@ -73,15 +73,15 @@ export class ImagePreviewModal extends Modal {
     }
 
     if (entry.status === "uploaded") {
-      const urlRow = meta.createDiv({ cls: "a4p-img-preview-row" });
+      const urlRow = body.createDiv({ cls: "a4p-img-preview-row" });
       setIcon(urlRow.createSpan({ cls: "a4p-img-preview-row-icon" }), "link");
       urlRow.createSpan({ cls: "a4p-img-preview-url", text: entry.url });
     }
 
-    // ── 액션 버튼 ──
-    const actions = contentEl.createDiv({ cls: "a4p-img-preview-actions" });
+    // ── 액션 버튼: CTA 1개 + 고스트 ──
+    const actions = body.createDiv({ cls: "a4p-img-preview-actions" });
 
-    this.actionButton(actions, "plus", "에디터에 삽입", true, () => {
+    this.actionButton(actions, "plus", "에디터에 삽입", { cta: true }, () => {
       if (entry.status !== "uploaded") {
         new Notice("아직 업로드되지 않은 이미지입니다. '실패한 업로드 재시도'를 먼저 실행하세요.");
         return;
@@ -89,30 +89,30 @@ export class ImagePreviewModal extends Modal {
       if (insertAtEditor(this.app, `![${stemOf(name)}](${entry.url})`)) this.close();
     });
 
-    this.actionButton(actions, "copy", "URL 복사", false, () => {
+    this.actionButton(actions, "copy", "URL 복사", {}, () => {
       void navigator.clipboard.writeText(entry.url);
       new Notice("URL을 복사했습니다.");
     });
 
     if (entry.sourceNote) {
-      this.actionButton(actions, "file-text", "노트 열기", false, () => {
+      this.actionButton(actions, "file-text", "노트 열기", {}, () => {
         this.close();
         void this.app.workspace.openLinkText(entry.sourceNote!, "", false);
       });
     }
 
     if (entry.status === "uploaded" && Platform.isDesktopApp) {
-      this.actionButton(actions, "external-link", "브라우저에서 열기", false, () => {
+      this.actionButton(actions, "external-link", "브라우저에서 열기", {}, () => {
         window.open(entry.url);
       });
     }
 
-    this.actionButton(actions, "search", "사용처 검색", false, async (btn) => {
+    this.actionButton(actions, "search", "사용처 검색", {}, async (btn) => {
       btn.disabled = true;
       setIcon(btn.querySelector(".a4p-img-btn-icon") as HTMLElement, "loader-2");
       try {
         const usages = await findImageUsages(this.app, this.entry);
-        this.renderUsages(contentEl, usages);
+        this.renderUsages(body, usages);
       } finally {
         btn.disabled = false;
         setIcon(btn.querySelector(".a4p-img-btn-icon") as HTMLElement, "search");
@@ -124,13 +124,18 @@ export class ImagePreviewModal extends Modal {
     parent: HTMLElement,
     icon: string,
     label: string,
-    cta: boolean,
+    opts: { cta?: boolean; iconOnly?: boolean },
     onClick: (btn: HTMLButtonElement) => void | Promise<void>,
   ): void {
     const btn = parent.createEl("button", { cls: "a4p-img-btn" });
-    if (cta) btn.addClass("mod-cta");
+    if (opts.cta) btn.addClass("mod-cta");
+    if (opts.iconOnly) {
+      btn.addClass("a4p-img-btn--icon");
+      btn.title = label;
+      btn.setAttribute("aria-label", label);
+    }
     setIcon(btn.createSpan({ cls: "a4p-img-btn-icon" }), icon);
-    btn.createSpan({ text: label });
+    if (!opts.iconOnly) btn.createSpan({ text: label });
     btn.addEventListener("click", () => void onClick(btn));
   }
 

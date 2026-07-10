@@ -1636,9 +1636,9 @@ var ImagePreviewModal = class extends import_obsidian9.Modal {
     const local = entry.localPath ? this.app.vault.getAbstractFileByPath(entry.localPath) : null;
     img.src = local instanceof import_obsidian9.TFile ? this.app.vault.getResourcePath(local) : entry.url;
     img.alt = name;
-    const meta = contentEl.createDiv({ cls: "a4p-img-preview-meta" });
-    meta.createDiv({ cls: "a4p-img-preview-name", text: name });
-    const subEl = meta.createDiv({ cls: "a4p-img-preview-sub" });
+    const body = contentEl.createDiv({ cls: "a4p-img-preview-body" });
+    body.createDiv({ cls: "a4p-img-preview-name", text: name });
+    const subEl = body.createDiv({ cls: "a4p-img-preview-sub" });
     const dateStr = new Date(entry.createdAt).toLocaleString("ko-KR", {
       dateStyle: "medium",
       timeStyle: "short"
@@ -1653,7 +1653,7 @@ var ImagePreviewModal = class extends import_obsidian9.Modal {
       }
     });
     if (entry.sourceNote) {
-      const noteRow = meta.createDiv({ cls: "a4p-img-preview-row" });
+      const noteRow = body.createDiv({ cls: "a4p-img-preview-row" });
       (0, import_obsidian9.setIcon)(noteRow.createSpan({ cls: "a4p-img-preview-row-icon" }), "file-text");
       const noteLink = noteRow.createEl("a", { text: entry.sourceNote, cls: "a4p-img-preview-link" });
       noteLink.addEventListener("click", (evt) => {
@@ -1663,12 +1663,12 @@ var ImagePreviewModal = class extends import_obsidian9.Modal {
       });
     }
     if (entry.status === "uploaded") {
-      const urlRow = meta.createDiv({ cls: "a4p-img-preview-row" });
+      const urlRow = body.createDiv({ cls: "a4p-img-preview-row" });
       (0, import_obsidian9.setIcon)(urlRow.createSpan({ cls: "a4p-img-preview-row-icon" }), "link");
       urlRow.createSpan({ cls: "a4p-img-preview-url", text: entry.url });
     }
-    const actions = contentEl.createDiv({ cls: "a4p-img-preview-actions" });
-    this.actionButton(actions, "plus", "\uC5D0\uB514\uD130\uC5D0 \uC0BD\uC785", true, () => {
+    const actions = body.createDiv({ cls: "a4p-img-preview-actions" });
+    this.actionButton(actions, "plus", "\uC5D0\uB514\uD130\uC5D0 \uC0BD\uC785", { cta: true }, () => {
       if (entry.status !== "uploaded") {
         new import_obsidian9.Notice("\uC544\uC9C1 \uC5C5\uB85C\uB4DC\uB418\uC9C0 \uC54A\uC740 \uC774\uBBF8\uC9C0\uC785\uB2C8\uB2E4. '\uC2E4\uD328\uD55C \uC5C5\uB85C\uB4DC \uC7AC\uC2DC\uB3C4'\uB97C \uBA3C\uC800 \uC2E4\uD589\uD558\uC138\uC694.");
         return;
@@ -1676,39 +1676,45 @@ var ImagePreviewModal = class extends import_obsidian9.Modal {
       if (insertAtEditor(this.app, `![${stemOf(name)}](${entry.url})`))
         this.close();
     });
-    this.actionButton(actions, "copy", "URL \uBCF5\uC0AC", false, () => {
+    this.actionButton(actions, "copy", "URL \uBCF5\uC0AC", {}, () => {
       void navigator.clipboard.writeText(entry.url);
       new import_obsidian9.Notice("URL\uC744 \uBCF5\uC0AC\uD588\uC2B5\uB2C8\uB2E4.");
     });
     if (entry.sourceNote) {
-      this.actionButton(actions, "file-text", "\uB178\uD2B8 \uC5F4\uAE30", false, () => {
+      this.actionButton(actions, "file-text", "\uB178\uD2B8 \uC5F4\uAE30", {}, () => {
         this.close();
         void this.app.workspace.openLinkText(entry.sourceNote, "", false);
       });
     }
     if (entry.status === "uploaded" && import_obsidian9.Platform.isDesktopApp) {
-      this.actionButton(actions, "external-link", "\uBE0C\uB77C\uC6B0\uC800\uC5D0\uC11C \uC5F4\uAE30", false, () => {
+      this.actionButton(actions, "external-link", "\uBE0C\uB77C\uC6B0\uC800\uC5D0\uC11C \uC5F4\uAE30", {}, () => {
         window.open(entry.url);
       });
     }
-    this.actionButton(actions, "search", "\uC0AC\uC6A9\uCC98 \uAC80\uC0C9", false, async (btn) => {
+    this.actionButton(actions, "search", "\uC0AC\uC6A9\uCC98 \uAC80\uC0C9", {}, async (btn) => {
       btn.disabled = true;
       (0, import_obsidian9.setIcon)(btn.querySelector(".a4p-img-btn-icon"), "loader-2");
       try {
         const usages = await findImageUsages(this.app, this.entry);
-        this.renderUsages(contentEl, usages);
+        this.renderUsages(body, usages);
       } finally {
         btn.disabled = false;
         (0, import_obsidian9.setIcon)(btn.querySelector(".a4p-img-btn-icon"), "search");
       }
     });
   }
-  actionButton(parent, icon, label, cta, onClick) {
+  actionButton(parent, icon, label, opts, onClick) {
     const btn = parent.createEl("button", { cls: "a4p-img-btn" });
-    if (cta)
+    if (opts.cta)
       btn.addClass("mod-cta");
+    if (opts.iconOnly) {
+      btn.addClass("a4p-img-btn--icon");
+      btn.title = label;
+      btn.setAttribute("aria-label", label);
+    }
     (0, import_obsidian9.setIcon)(btn.createSpan({ cls: "a4p-img-btn-icon" }), icon);
-    btn.createSpan({ text: label });
+    if (!opts.iconOnly)
+      btn.createSpan({ text: label });
     btn.addEventListener("click", () => void onClick(btn));
   }
   renderUsages(parent, usages) {
@@ -1768,19 +1774,32 @@ var GalleryView = class extends import_obsidian10.ItemView {
     root.empty();
     root.addClass("a4p-img-panel");
     const searchRow = root.createDiv({ cls: "a4p-img-search-row" });
-    const input = searchRow.createEl("input", {
+    const inputWrap = searchRow.createDiv({ cls: "a4p-img-input-wrap" });
+    (0, import_obsidian10.setIcon)(inputWrap.createSpan({ cls: "a4p-img-input-icon" }), "search");
+    const input = inputWrap.createEl("input", {
       type: "text",
       placeholder: "\uD30C\uC77C\uBA85\xB7\uB178\uD2B8 \uAC80\uC0C9\u2026",
       cls: "a4p-img-search-input"
     });
+    const clearBtn = inputWrap.createSpan({ cls: "a4p-img-input-clear" });
+    (0, import_obsidian10.setIcon)(clearBtn, "x");
+    const applyQuery = (value) => {
+      this.query = value.trim().toLowerCase();
+      inputWrap.toggleClass("has-value", value.length > 0);
+      this.renderGrid();
+    };
     input.addEventListener("input", () => {
+      inputWrap.toggleClass("has-value", input.value.length > 0);
       if (this.debounceTimer !== null)
         window.clearTimeout(this.debounceTimer);
-      this.debounceTimer = window.setTimeout(() => {
-        this.query = input.value.trim().toLowerCase();
-        this.renderGrid();
-      }, DEBOUNCE_MS);
+      this.debounceTimer = window.setTimeout(() => applyQuery(input.value), DEBOUNCE_MS);
     });
+    clearBtn.addEventListener("click", () => {
+      input.value = "";
+      applyQuery("");
+      input.focus();
+    });
+    new GallerySuggest(this.app, this.plugin, input, (picked) => applyQuery(picked));
     const refreshBtn = searchRow.createEl("button", { cls: "a4p-img-icon-btn" });
     refreshBtn.title = "\uC0C8\uB85C\uACE0\uCE68 (\uB178\uD2B8\uBCC4 \uC0AC\uC6A9\uCC98 \uC7AC\uC2A4\uCE94 \uD3EC\uD568)";
     (0, import_obsidian10.setIcon)(refreshBtn, "refresh-cw");
@@ -1788,35 +1807,36 @@ var GalleryView = class extends import_obsidian10.ItemView {
       this.usageMap = null;
       this.renderGrid();
     });
-    const filterRow = root.createDiv({ cls: "a4p-img-filter-row" });
-    const statusSelect = filterRow.createEl("select", { cls: "dropdown a4p-img-select" });
-    for (const [value, label] of [
-      ["all", "\uC804\uCCB4 \uC0C1\uD0DC"],
-      ["uploaded", "\uC5C5\uB85C\uB4DC\uB428"],
-      ["pending", "\uB300\uAE30"],
-      ["failed", "\uC2E4\uD328"]
-    ]) {
-      const opt = statusSelect.createEl("option", { text: label });
-      opt.value = value;
-    }
-    statusSelect.addEventListener("change", () => {
-      this.statusFilter = statusSelect.value;
-      this.renderGrid();
-    });
-    const dateSelect = filterRow.createEl("select", { cls: "dropdown a4p-img-select" });
-    for (const [value, label] of [
-      ["all", "\uC804\uCCB4 \uAE30\uAC04"],
-      ["7", "\uCD5C\uADFC 7\uC77C"],
-      ["30", "\uCD5C\uADFC 30\uC77C"]
-    ]) {
-      const opt = dateSelect.createEl("option", { text: label });
-      opt.value = value;
-    }
-    dateSelect.addEventListener("change", () => {
-      this.dateFilter = dateSelect.value;
-      this.renderGrid();
-    });
-    const groupBtn = filterRow.createEl("button", { cls: "a4p-img-chip" });
+    const statusRow = root.createDiv({ cls: "a4p-img-filter-row" });
+    this.buildSegmented(
+      statusRow,
+      [
+        ["all", "\uC804\uCCB4"],
+        ["uploaded", "\uC5C5\uB85C\uB4DC"],
+        ["pending", "\uB300\uAE30"],
+        ["failed", "\uC2E4\uD328"]
+      ],
+      this.statusFilter,
+      (v) => {
+        this.statusFilter = v;
+        this.renderGrid();
+      }
+    );
+    const dateRow = root.createDiv({ cls: "a4p-img-filter-row" });
+    this.buildSegmented(
+      dateRow,
+      [
+        ["all", "\uC804\uCCB4 \uAE30\uAC04"],
+        ["7", "7\uC77C"],
+        ["30", "30\uC77C"]
+      ],
+      this.dateFilter,
+      (v) => {
+        this.dateFilter = v;
+        this.renderGrid();
+      }
+    );
+    const groupBtn = dateRow.createEl("button", { cls: "a4p-img-chip" });
     (0, import_obsidian10.setIcon)(groupBtn.createSpan({ cls: "a4p-img-chip-icon" }), "folder-tree");
     groupBtn.createSpan({ text: "\uB178\uD2B8\uBCC4" });
     groupBtn.title = "\uB178\uD2B8\uBCC4 \uADF8\uB8F9 \uBCF4\uAE30 \uC804\uD658";
@@ -1833,6 +1853,23 @@ var GalleryView = class extends import_obsidian10.ItemView {
   async onClose() {
     if (this.debounceTimer !== null)
       window.clearTimeout(this.debounceTimer);
+  }
+  /** iOS 스타일 세그먼트 컨트롤 */
+  buildSegmented(parent, options, initial, onChange) {
+    const box = parent.createDiv({ cls: "a4p-img-seg" });
+    const buttons = [];
+    for (const [value, label] of options) {
+      const btn = box.createEl("button", { cls: "a4p-img-seg-btn", text: label });
+      if (value === initial)
+        btn.addClass("is-active");
+      btn.addEventListener("click", () => {
+        for (const b of buttons)
+          b.removeClass("is-active");
+        btn.addClass("is-active");
+        onChange(value);
+      });
+      buttons.push(btn);
+    }
   }
   entryName(entry) {
     var _a;
@@ -1870,7 +1907,8 @@ var GalleryView = class extends import_obsidian10.ItemView {
     if (entries.length === 0) {
       const empty = this.gridEl.createDiv({ cls: "a4p-img-empty" });
       (0, import_obsidian10.setIcon)(empty.createDiv({ cls: "a4p-img-empty-icon" }), "image-off");
-      empty.createDiv({ text: "\uD45C\uC2DC\uD560 \uC774\uBBF8\uC9C0\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4." });
+      empty.createDiv({ cls: "a4p-img-empty-title", text: "\uD45C\uC2DC\uD560 \uC774\uBBF8\uC9C0\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4" });
+      empty.createDiv({ cls: "a4p-img-empty-sub", text: "\uD544\uD130\uB97C \uBC14\uAFB8\uAC70\uB098 \uB178\uD2B8\uC5D0 \uC774\uBBF8\uC9C0\uB97C \uBD99\uC5EC\uB123\uC5B4 \uBCF4\uC138\uC694." });
       return;
     }
     if (this.groupByNote) {
@@ -1898,9 +1936,9 @@ var GalleryView = class extends import_obsidian10.ItemView {
           this.renderGrid();
         });
       }
-      const loading = this.gridEl.createDiv({ cls: "a4p-img-empty" });
+      const loading = this.gridEl.createDiv({ cls: "a4p-img-empty is-loading" });
       (0, import_obsidian10.setIcon)(loading.createDiv({ cls: "a4p-img-empty-icon" }), "loader-2");
-      loading.createDiv({ text: "\uB178\uD2B8\uBCC4 \uC0AC\uC6A9\uCC98\uB97C \uC2A4\uCE94\uD558\uB294 \uC911\u2026" });
+      loading.createDiv({ cls: "a4p-img-empty-title", text: "\uB178\uD2B8\uBCC4 \uC0AC\uC6A9\uCC98\uB97C \uC2A4\uCE94\uD558\uB294 \uC911\u2026" });
       return;
     }
     const groups = /* @__PURE__ */ new Map();
@@ -1915,9 +1953,8 @@ var GalleryView = class extends import_obsidian10.ItemView {
     }
     for (const [note, groupEntries] of groups) {
       const header = this.gridEl.createDiv({ cls: "a4p-img-group" });
-      (0, import_obsidian10.setIcon)(header.createSpan({ cls: "a4p-img-group-icon" }), "file-text");
       header.createSpan({ text: noteBasename(note) });
-      header.createSpan({ cls: "a4p-img-group-count", text: String(groupEntries.length) });
+      header.createSpan({ cls: "a4p-img-group-count", text: `${groupEntries.length}\uC7A5` });
       header.title = note;
       const groupGrid = this.gridEl.createDiv({ cls: "a4p-img-grid-inner" });
       for (const entry of groupEntries)
@@ -1970,6 +2007,9 @@ var GalleryView = class extends import_obsidian10.ItemView {
     var _a;
     const name = this.entryName(entry);
     const card = parent.createDiv({ cls: "a4p-img-card" });
+    card.title = `${name}
+${(_a = entry.localPath) != null ? _a : "(\uB85C\uCEEC \uBC31\uC5C5 \uC5C6\uC74C)"}
+${entry.url}`;
     const thumbWrap = card.createDiv({ cls: "a4p-img-thumbwrap" });
     const img = thumbWrap.createEl("img", { cls: "a4p-img-thumb" });
     img.loading = "lazy";
@@ -1977,10 +2017,8 @@ var GalleryView = class extends import_obsidian10.ItemView {
     img.src = local instanceof import_obsidian10.TFile ? this.app.vault.getResourcePath(local) : entry.url;
     img.alt = name;
     if (entry.status !== "uploaded") {
-      thumbWrap.createDiv({
-        cls: `a4p-img-badge ${entry.status}`,
-        text: entry.status === "failed" ? "\uC2E4\uD328" : "\uB300\uAE30"
-      });
+      const dot = thumbWrap.createDiv({ cls: `a4p-img-dot ${entry.status}` });
+      dot.title = entry.status === "failed" ? "\uC5C5\uB85C\uB4DC \uC2E4\uD328" : "\uC5C5\uB85C\uB4DC \uB300\uAE30";
     }
     const quick = thumbWrap.createDiv({ cls: "a4p-img-quick" });
     const insertBtn = quick.createEl("button", { cls: "a4p-img-quick-btn" });
@@ -2002,12 +2040,9 @@ var GalleryView = class extends import_obsidian10.ItemView {
       void navigator.clipboard.writeText(entry.url);
       new import_obsidian10.Notice("URL\uC744 \uBCF5\uC0AC\uD588\uC2B5\uB2C8\uB2E4.");
     });
-    const meta = card.createDiv({ cls: "a4p-img-card-meta" });
-    meta.createDiv({ cls: "a4p-img-card-name", text: name });
-    meta.createDiv({ cls: "a4p-img-card-sub", text: formatBytes(entry.size) });
-    meta.title = `${name}
-${(_a = entry.localPath) != null ? _a : "(\uB85C\uCEEC \uBC31\uC5C5 \uC5C6\uC74C)"}
-${entry.url}`;
+    const overlay = thumbWrap.createDiv({ cls: "a4p-img-card-overlay" });
+    overlay.createDiv({ cls: "a4p-img-card-name", text: name });
+    overlay.createDiv({ cls: "a4p-img-card-sub", text: formatBytes(entry.size) });
     card.addEventListener("click", () => {
       new ImagePreviewModal(this.app, this.plugin, entry).open();
     });
@@ -2018,6 +2053,51 @@ function noteBasename(path) {
   const name = (_a = path.split("/").pop()) != null ? _a : path;
   return name.replace(/\.md$/i, "");
 }
+var GallerySuggest = class extends import_obsidian10.AbstractInputSuggest {
+  constructor(app, plugin, inputEl, onPick) {
+    super(app, inputEl);
+    this.plugin = plugin;
+    this.onPick = onPick;
+  }
+  getSuggestions(query) {
+    var _a;
+    const q = query.trim().toLowerCase();
+    if (!q)
+      return [];
+    const seen = /* @__PURE__ */ new Set();
+    const files = [];
+    const notes = [];
+    for (const entry of this.plugin.manifestStore.all()) {
+      const path = (_a = entry.localPath) != null ? _a : entry.r2Key;
+      const i = path.lastIndexOf("/");
+      const name = i >= 0 ? path.slice(i + 1) : path;
+      if (name.toLowerCase().includes(q) && !seen.has(`f:${name}`)) {
+        seen.add(`f:${name}`);
+        files.push({ kind: "file", label: name });
+      }
+      if (entry.sourceNote) {
+        const base = noteBasename(entry.sourceNote);
+        if (base.toLowerCase().includes(q) && !seen.has(`n:${base}`)) {
+          seen.add(`n:${base}`);
+          notes.push({ kind: "note", label: base });
+        }
+      }
+    }
+    const rank = (s) => s.label.toLowerCase().startsWith(q) ? 0 : 1;
+    return [...files, ...notes].sort((a, b) => rank(a) - rank(b)).slice(0, 8);
+  }
+  renderSuggestion(value, el) {
+    el.addClass("a4p-img-suggest-item");
+    (0, import_obsidian10.setIcon)(el.createSpan({ cls: "a4p-img-suggest-icon" }), value.kind === "file" ? "image" : "file-text");
+    el.createSpan({ cls: "a4p-img-suggest-label", text: value.label });
+    el.createSpan({ cls: "a4p-img-suggest-kind", text: value.kind === "file" ? "\uC774\uBBF8\uC9C0" : "\uB178\uD2B8" });
+  }
+  selectSuggestion(value) {
+    this.setValue(value.label);
+    this.onPick(value.label);
+    this.close();
+  }
+};
 
 // src/migrate-modal.ts
 var import_obsidian11 = require("obsidian");
