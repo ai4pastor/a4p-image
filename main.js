@@ -1065,8 +1065,8 @@ function buildConvertPlan(refs) {
   }
   return { byNote, imagePaths: [...imageSet], totalEmbeds: refs.length };
 }
-function markdownImageText(filename, url) {
-  return `![${stemOf(filename)}](${url})`;
+function markdownImageText(filename, url, alt) {
+  return `![${alt != null ? alt : stemOf(filename)}](${url})`;
 }
 function applyReplacements(content, replacements) {
   let next = content;
@@ -1104,7 +1104,8 @@ function scanImageEmbeds(plugin, notes) {
         continue;
       if (!isImageExt(dest.extension, plugin.settings.imageExtensions))
         continue;
-      refs.push({ notePath: md.path, original: embed.original, imagePath: dest.path });
+      const alt = embed.displayText && embed.displayText !== embed.link && embed.displayText !== dest.name ? embed.displayText : void 0;
+      refs.push({ notePath: md.path, original: embed.original, imagePath: dest.path, alt });
       sizes.set(dest.path, dest.stat.size);
     }
   }
@@ -1204,7 +1205,7 @@ async function executeConvert(plugin, refs) {
         continue;
       const replacements = noteRefs.filter((r) => urlByImage.has(r.imagePath)).map((r) => {
         const { url, filename } = urlByImage.get(r.imagePath);
-        return { original: r.original, replacement: markdownImageText(filename, url) };
+        return { original: r.original, replacement: markdownImageText(filename, url, r.alt) };
       });
       if (replacements.length === 0)
         continue;

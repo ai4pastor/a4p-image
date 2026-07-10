@@ -56,6 +56,10 @@ describe("markdownImageText / formatBytes", () => {
     expect(markdownImageText("img-20260710.png", "https://x/a.png")).toBe("![img-20260710](https://x/a.png)");
   });
 
+  it("alt(크기·캡션)가 있으면 보존 — ![[img|300]] → ![300](url)", () => {
+    expect(markdownImageText("img.png", "https://x/a.png", "300")).toBe("![300](https://x/a.png)");
+  });
+
   it("바이트 표기", () => {
     expect(formatBytes(512)).toBe("512 B");
     expect(formatBytes(2048)).toBe("2.0 KB");

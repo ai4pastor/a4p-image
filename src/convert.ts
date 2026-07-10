@@ -3,10 +3,12 @@ import { stemOf } from "./filename";
 
 export interface EmbedRef {
   notePath: string;
-  /** 노트 원문에 등장하는 임베드 텍스트 그대로 (예: `![[img.png]]`) */
+  /** 노트 원문에 등장하는 임베드 텍스트 그대로 (예: `![[img.png|300]]`) */
   original: string;
   /** 임베드가 가리키는 볼트 상대 이미지 경로 */
   imagePath: string;
+  /** `![[img.png|300]]`의 "300" 같은 표시 텍스트(크기·캡션) — 변환 후에도 보존 */
+  alt?: string;
 }
 
 export interface ConvertPlan {
@@ -29,8 +31,8 @@ export function buildConvertPlan(refs: EmbedRef[]): ConvertPlan {
   return { byNote, imagePaths: [...imageSet], totalEmbeds: refs.length };
 }
 
-export function markdownImageText(filename: string, url: string): string {
-  return `![${stemOf(filename)}](${url})`;
+export function markdownImageText(filename: string, url: string, alt?: string): string {
+  return `![${alt ?? stemOf(filename)}](${url})`;
 }
 
 /**

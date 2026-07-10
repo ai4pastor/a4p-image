@@ -14,7 +14,12 @@ export function scanImageEmbeds(plugin: A4pImagePlugin, notes: TFile[]): { refs:
       const dest = app.metadataCache.getFirstLinkpathDest(embed.link, md.path);
       if (!(dest instanceof TFile)) continue;
       if (!isImageExt(dest.extension, plugin.settings.imageExtensions)) continue;
-      refs.push({ notePath: md.path, original: embed.original, imagePath: dest.path });
+      // `![[img|300]]`의 크기·캡션 보존 — displayText가 링크 자체와 같으면 없는 것으로 간주
+      const alt =
+        embed.displayText && embed.displayText !== embed.link && embed.displayText !== dest.name
+          ? embed.displayText
+          : undefined;
+      refs.push({ notePath: md.path, original: embed.original, imagePath: dest.path, alt });
       sizes.set(dest.path, dest.stat.size);
     }
   }
@@ -128,7 +133,7 @@ async function executeConvert(plugin: A4pImagePlugin, refs: EmbedRef[]): Promise
         .filter((r) => urlByImage.has(r.imagePath))
         .map((r) => {
           const { url, filename } = urlByImage.get(r.imagePath)!;
-          return { original: r.original, replacement: markdownImageText(filename, url) };
+          return { original: r.original, replacement: markdownImageText(filename, url, r.alt) };
         });
       if (replacements.length === 0) continue;
       await app.vault.process(md, (content) => {
