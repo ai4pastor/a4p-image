@@ -1748,6 +1748,9 @@ var GalleryView = class extends import_obsidian10.ItemView {
     this.dateFilter = "all";
     this.groupByNote = false;
     this.debounceTimer = null;
+    /** entryId → 이 이미지를 실제 사용 중인 노트 경로들 (노트별 보기용, 새로고침 시 재스캔) */
+    this.usageMap = null;
+    this.usageScanning = false;
     this.plugin = plugin;
   }
   getViewType() {
@@ -1778,9 +1781,12 @@ var GalleryView = class extends import_obsidian10.ItemView {
       }, DEBOUNCE_MS);
     });
     const refreshBtn = searchRow.createEl("button", { cls: "a4p-img-icon-btn" });
-    refreshBtn.title = "\uC0C8\uB85C\uACE0\uCE68";
+    refreshBtn.title = "\uC0C8\uB85C\uACE0\uCE68 (\uB178\uD2B8\uBCC4 \uC0AC\uC6A9\uCC98 \uC7AC\uC2A4\uCE94 \uD3EC\uD568)";
     (0, import_obsidian10.setIcon)(refreshBtn, "refresh-cw");
-    refreshBtn.addEventListener("click", () => this.renderGrid());
+    refreshBtn.addEventListener("click", () => {
+      this.usageMap = null;
+      this.renderGrid();
+    });
     const filterRow = root.createDiv({ cls: "a4p-img-filter-row" });
     const statusSelect = filterRow.createEl("select", { cls: "dropdown a4p-img-select" });
     for (const [value, label] of [
@@ -1834,7 +1840,6 @@ var GalleryView = class extends import_obsidian10.ItemView {
     return i >= 0 ? path.slice(i + 1) : path;
   }
   renderGrid() {
-    var _a, _b;
     if (!this.gridEl)
       return;
     this.gridEl.empty();
@@ -1848,8 +1853,8 @@ var GalleryView = class extends import_obsidian10.ItemView {
     }
     if (this.query) {
       entries = entries.filter((e) => {
-        var _a2;
-        const haystack = `${this.entryName(e)} ${(_a2 = e.sourceNote) != null ? _a2 : ""}`.toLowerCase();
+        var _a;
+        const haystack = `${this.entryName(e)} ${(_a = e.sourceNote) != null ? _a : ""}`.toLowerCase();
         return haystack.includes(this.query);
       });
     }
@@ -1868,28 +1873,97 @@ var GalleryView = class extends import_obsidian10.ItemView {
       return;
     }
     if (this.groupByNote) {
-      const groups = /* @__PURE__ */ new Map();
-      for (const entry of entries) {
-        const key = (_a = entry.sourceNote) != null ? _a : "(\uB178\uD2B8 \uBBF8\uC9C0\uC815)";
-        const list = (_b = groups.get(key)) != null ? _b : [];
-        list.push(entry);
-        groups.set(key, list);
-      }
-      for (const [note, groupEntries] of groups) {
-        const header = this.gridEl.createDiv({ cls: "a4p-img-group" });
-        (0, import_obsidian10.setIcon)(header.createSpan({ cls: "a4p-img-group-icon" }), "file-text");
-        header.createSpan({ text: noteBasename(note) });
-        header.createSpan({ cls: "a4p-img-group-count", text: String(groupEntries.length) });
-        header.title = note;
-        const groupGrid = this.gridEl.createDiv({ cls: "a4p-img-grid-inner" });
-        for (const entry of groupEntries)
-          this.renderCard(groupGrid, entry);
-      }
+      this.renderGroupedByUsage(entries);
     } else {
       for (const entry of entries) {
         this.renderCard(this.gridEl, entry);
       }
     }
+  }
+  /**
+   * 노트별 보기 — sourceNote(최초 삽입 노트)가 아니라 실제 사용처 기준.
+   * 한 이미지가 여러 노트에 쓰이면 각 그룹에 모두 표시된다.
+   */
+  renderGroupedByUsage(entries) {
+    var _a, _b;
+    if (!this.gridEl)
+      return;
+    if (!this.usageMap) {
+      if (!this.usageScanning) {
+        this.usageScanning = true;
+        void this.computeUsageMap().then((map) => {
+          this.usageMap = map;
+          this.usageScanning = false;
+          this.renderGrid();
+        });
+      }
+      const loading = this.gridEl.createDiv({ cls: "a4p-img-empty" });
+      (0, import_obsidian10.setIcon)(loading.createDiv({ cls: "a4p-img-empty-icon" }), "loader-2");
+      loading.createDiv({ text: "\uB178\uD2B8\uBCC4 \uC0AC\uC6A9\uCC98\uB97C \uC2A4\uCE94\uD558\uB294 \uC911\u2026" });
+      return;
+    }
+    const groups = /* @__PURE__ */ new Map();
+    for (const entry of entries) {
+      const notes = (_a = this.usageMap.get(entry.id)) != null ? _a : [];
+      const keys = notes.length > 0 ? notes : ["(\uC0AC\uC6A9\uB41C \uB178\uD2B8 \uC5C6\uC74C)"];
+      for (const key of keys) {
+        const list = (_b = groups.get(key)) != null ? _b : [];
+        list.push(entry);
+        groups.set(key, list);
+      }
+    }
+    for (const [note, groupEntries] of groups) {
+      const header = this.gridEl.createDiv({ cls: "a4p-img-group" });
+      (0, import_obsidian10.setIcon)(header.createSpan({ cls: "a4p-img-group-icon" }), "file-text");
+      header.createSpan({ text: noteBasename(note) });
+      header.createSpan({ cls: "a4p-img-group-count", text: String(groupEntries.length) });
+      header.title = note;
+      const groupGrid = this.gridEl.createDiv({ cls: "a4p-img-grid-inner" });
+      for (const entry of groupEntries)
+        this.renderCard(groupGrid, entry);
+    }
+  }
+  /** 전 볼트 1회 스캔으로 entryId → 사용 노트 목록 구축 */
+  async computeUsageMap() {
+    const entries = this.plugin.manifestStore.all();
+    const map = /* @__PURE__ */ new Map();
+    const push = (id, notePath) => {
+      var _a;
+      const set = (_a = map.get(id)) != null ? _a : /* @__PURE__ */ new Set();
+      set.add(notePath);
+      map.set(id, set);
+    };
+    const byLocal = /* @__PURE__ */ new Map();
+    for (const e of entries) {
+      if (e.localPath)
+        byLocal.set(e.localPath, e);
+    }
+    for (const [mdPath, links] of Object.entries(this.app.metadataCache.resolvedLinks)) {
+      for (const target of Object.keys(links)) {
+        const e = byLocal.get(target);
+        if (e)
+          push(e.id, mdPath);
+      }
+    }
+    const withUrl = entries.filter((e) => e.url);
+    const origins = [
+      ...new Set(withUrl.map((e) => {
+        var _a;
+        return (_a = e.url.match(/^https?:\/\/[^/]+/)) == null ? void 0 : _a[0];
+      }).filter((o) => !!o))
+    ];
+    if (withUrl.length > 0 && origins.length > 0) {
+      for (const md of this.app.vault.getMarkdownFiles()) {
+        const content = await this.app.vault.cachedRead(md);
+        if (!origins.some((o) => content.includes(o)))
+          continue;
+        for (const e of withUrl) {
+          if (content.includes(e.url))
+            push(e.id, md.path);
+        }
+      }
+    }
+    return new Map([...map.entries()].map(([id, set]) => [id, [...set]]));
   }
   renderCard(parent, entry) {
     var _a;
