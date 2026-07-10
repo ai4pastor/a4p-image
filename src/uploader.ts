@@ -1,4 +1,4 @@
-import { Notice, TFile, normalizePath } from "obsidian";
+import { Notice, TFile, TFolder, normalizePath } from "obsidian";
 import type A4pImagePlugin from "./main";
 import type { EntryOrigin, ManifestEntry, UploadOutcome } from "./types";
 import {
@@ -8,6 +8,7 @@ import {
   makeNamedBaseName,
   makeR2Key,
   mimeForExt,
+  nextNoteImageName,
   randSuffix,
   stemOf,
 } from "./filename";
@@ -45,8 +46,16 @@ export class Uploader {
     const now = new Date();
     const extFromName = input.name ? extOf(input.name) : "";
     const ext = extForMime(input.mime) ?? (extFromName || "png");
-    const base = input.name ? makeNamedBaseName(input.name, randSuffix()) : makeImageBaseName(now, randSuffix());
-    const filename = `${base}.${ext}`;
+
+    let filename: string;
+    if (input.name) {
+      // drop/Eagle — 원본 이름 stem 보존
+      filename = `${makeNamedBaseName(input.name, randSuffix())}.${ext}`;
+    } else if (this.plugin.settings.namingScheme === "note" && input.sourceNotePath) {
+      filename = await this.noteBasedFilename(input.sourceNotePath, ext);
+    } else {
+      filename = `${makeImageBaseName(now, randSuffix())}.${ext}`;
+    }
 
     let localPath: string | null = null;
     if (this.plugin.settings.localBackup) {
@@ -59,10 +68,13 @@ export class Uploader {
       }
     }
 
+    // 로컬 저장 시 충돌 회피로 이름이 바뀌었을 수 있음 — 실제 저장된 이름을 R2 키에도 사용
+    const finalName = localPath ? (localPath.split("/").pop() ?? filename) : filename;
+
     const entry: ManifestEntry = {
-      id: `${base}`,
+      id: `${stemOf(finalName)}-${randSuffix()}`,
       localPath,
-      r2Key: makeR2Key(this.plugin.settings.r2.keyPrefix, now, filename),
+      r2Key: makeR2Key(this.plugin.settings.r2.keyPrefix, now, finalName),
       url: "",
       hash,
       size: buf.byteLength,
@@ -141,6 +153,32 @@ export class Uploader {
         error: e instanceof Error ? e.message : String(e),
       };
     }
+  }
+
+  /** `{노트제목}_{n}.{ext}` — 대상 첨부 폴더를 스캔해 최대 번호 +1 */
+  private async noteBasedFilename(sourceNotePath: string, ext: string): Promise<string> {
+    const noteName = sourceNotePath.split("/").pop() ?? sourceNotePath;
+    const title = noteName.replace(/\.md$/i, "");
+    const folderPath = await this.attachmentFolderFor(`probe.${ext}`, sourceNotePath);
+
+    const { vault } = this.plugin.app;
+    const folder = folderPath ? vault.getAbstractFileByPath(folderPath) : vault.getRoot();
+    const existingNames: string[] = [];
+    if (folder instanceof TFolder) {
+      for (const child of folder.children) {
+        if (child instanceof TFile) existingNames.push(child.name);
+      }
+    }
+    return nextNoteImageName(title, existingNames, ext);
+  }
+
+  /** 이미지가 저장될 첨부 폴더 경로 — 오버라이드 설정 우선, 없으면 볼트 첨부 설정 */
+  private async attachmentFolderFor(sampleName: string, sourceNotePath: string | null): Promise<string> {
+    const override = this.plugin.settings.attachmentSubfolder;
+    if (override) return normalizePath(override);
+    const probe = await this.plugin.app.fileManager.getAvailablePathForAttachment(sampleName, sourceNotePath ?? "");
+    const i = probe.lastIndexOf("/");
+    return i >= 0 ? probe.slice(0, i) : "";
   }
 
   private async saveToVault(filename: string, buf: ArrayBuffer, sourceNotePath: string | null): Promise<string> {

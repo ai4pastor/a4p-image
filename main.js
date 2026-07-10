@@ -35,6 +35,7 @@ var DEFAULT_SETTINGS = {
     publicBaseUrl: "",
     keyPrefix: "obsidian"
   },
+  namingScheme: "note",
   localBackup: true,
   attachmentSubfolder: "",
   fallbackToLocalEmbed: true,
@@ -113,6 +114,16 @@ var A4pImageSettingTab = class extends import_obsidian.PluginSettingTab {
     );
     statusEl = containerEl.createDiv({ cls: "a4p-image-settings-status" });
     new import_obsidian.Setting(containerEl).setName("\uB3D9\uC791").setHeading();
+    new import_obsidian.Setting(containerEl).setName("\uBD99\uC5EC\uB123\uAE30 \uD30C\uC77C\uBA85 \uADDC\uCE59").setDesc(
+      "\uB178\uD2B8 \uC81C\uBAA9: \uD65C\uC131 \uB178\uD2B8 \uC81C\uBAA9 \uB4A4\uC5D0 \uBC88\uD638\uB97C \uBD99\uC785\uB2C8\uB2E4 (\uC608: \uC635\uC2DC\uB514\uC5B8_1.png, \uC635\uC2DC\uB514\uC5B8_2.png). \uD0C0\uC784\uC2A4\uD0EC\uD504: img-\uB0A0\uC9DC-\uC2DC\uAC04 \uD615\uC2DD. \uB85C\uCEEC \uD30C\uC77C\uBA85\uACFC \uC5C5\uB85C\uB4DC \uD30C\uC77C\uBA85\uC774 \uB3D9\uC77C\uD558\uAC8C \uC801\uC6A9\uB418\uBA70, \uB4DC\uB86D\uD55C \uD30C\uC77C\uC740 \uC6D0\uBCF8 \uC774\uB984\uC744 \uC720\uC9C0\uD569\uB2C8\uB2E4."
+    ).addDropdown((drop) => {
+      drop.addOption("note", "\uB178\uD2B8 \uC81C\uBAA9_\uBC88\uD638");
+      drop.addOption("timestamp", "\uD0C0\uC784\uC2A4\uD0EC\uD504");
+      drop.setValue(this.plugin.settings.namingScheme).onChange(async (value) => {
+        this.plugin.settings.namingScheme = value;
+        await this.plugin.persist();
+      });
+    });
     new import_obsidian.Setting(containerEl).setName("\uB85C\uCEEC \uBC31\uC5C5 \uC720\uC9C0").setDesc(
       "\uCF1C\uBA74 \uC5C5\uB85C\uB4DC\uD55C \uC774\uBBF8\uC9C0\uB97C \uBCFC\uD2B8 \uCCA8\uBD80 \uD3F4\uB354\uC5D0\uB3C4 \uC800\uC7A5\uD569\uB2C8\uB2E4 (\uAD8C\uC7A5 \u2014 \uD074\uB77C\uC6B0\uB4DC \uC7A5\uC560\xB7\uC11C\uBE44\uC2A4 \uC885\uB8CC\uC5D0\uB3C4 \uC548\uC804). \uB044\uBA74 \uB178\uD2B8\uC5D0 URL\uB9CC \uB0A8\uACE0 \uBCFC\uD2B8\uC5D0\uB294 \uD30C\uC77C\uC774 \uC800\uC7A5\uB418\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4."
     ).addToggle(
@@ -448,6 +459,20 @@ function makeNamedBaseName(originalName, rand) {
   const stem = sanitizeFilename(stemOf(originalName));
   return stem ? `${stem}-${rand}` : `img-${rand}`;
 }
+function escapeRegExp(text) {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+function nextNoteImageName(noteTitle, existingNames, ext) {
+  const title = sanitizeFilename(noteTitle) || "img";
+  const re = new RegExp(`^${escapeRegExp(title)}_(\\d+)\\.`);
+  let max = 0;
+  for (const name of existingNames) {
+    const m = name.match(re);
+    if (m)
+      max = Math.max(max, parseInt(m[1], 10));
+  }
+  return `${title}_${max + 1}.${ext}`;
+}
 function makeR2Key(prefix, date, filename) {
   const y = date.getFullYear();
   const m = pad2(date.getMonth() + 1);
@@ -574,7 +599,7 @@ var Uploader = class {
   }
   /** 새 바이너리(클립보드·드롭·Eagle 복사) 처리 */
   async process(buf, input) {
-    var _a;
+    var _a, _b;
     const { manifestStore } = this.plugin;
     const hash = await sha256Hex(buf);
     const existing = manifestStore.byHash(hash);
@@ -584,8 +609,14 @@ var Uploader = class {
     const now = /* @__PURE__ */ new Date();
     const extFromName = input.name ? extOf(input.name) : "";
     const ext = (_a = extForMime(input.mime)) != null ? _a : extFromName || "png";
-    const base = input.name ? makeNamedBaseName(input.name, randSuffix()) : makeImageBaseName(now, randSuffix());
-    const filename = `${base}.${ext}`;
+    let filename;
+    if (input.name) {
+      filename = `${makeNamedBaseName(input.name, randSuffix())}.${ext}`;
+    } else if (this.plugin.settings.namingScheme === "note" && input.sourceNotePath) {
+      filename = await this.noteBasedFilename(input.sourceNotePath, ext);
+    } else {
+      filename = `${makeImageBaseName(now, randSuffix())}.${ext}`;
+    }
     let localPath = null;
     if (this.plugin.settings.localBackup) {
       try {
@@ -595,10 +626,11 @@ var Uploader = class {
         new import_obsidian3.Notice(`\uC774\uBBF8\uC9C0 \uB85C\uCEEC \uBC31\uC5C5 \uC800\uC7A5 \uC2E4\uD328: ${e instanceof Error ? e.message : String(e)}`);
       }
     }
+    const finalName = localPath ? (_b = localPath.split("/").pop()) != null ? _b : filename : filename;
     const entry = {
-      id: `${base}`,
+      id: `${stemOf(finalName)}-${randSuffix()}`,
       localPath,
-      r2Key: makeR2Key(this.plugin.settings.r2.keyPrefix, now, filename),
+      r2Key: makeR2Key(this.plugin.settings.r2.keyPrefix, now, finalName),
       url: "",
       hash,
       size: buf.byteLength,
@@ -672,6 +704,32 @@ var Uploader = class {
         error: e instanceof Error ? e.message : String(e)
       };
     }
+  }
+  /** `{노트제목}_{n}.{ext}` — 대상 첨부 폴더를 스캔해 최대 번호 +1 */
+  async noteBasedFilename(sourceNotePath, ext) {
+    var _a;
+    const noteName = (_a = sourceNotePath.split("/").pop()) != null ? _a : sourceNotePath;
+    const title = noteName.replace(/\.md$/i, "");
+    const folderPath = await this.attachmentFolderFor(`probe.${ext}`, sourceNotePath);
+    const { vault } = this.plugin.app;
+    const folder = folderPath ? vault.getAbstractFileByPath(folderPath) : vault.getRoot();
+    const existingNames = [];
+    if (folder instanceof import_obsidian3.TFolder) {
+      for (const child of folder.children) {
+        if (child instanceof import_obsidian3.TFile)
+          existingNames.push(child.name);
+      }
+    }
+    return nextNoteImageName(title, existingNames, ext);
+  }
+  /** 이미지가 저장될 첨부 폴더 경로 — 오버라이드 설정 우선, 없으면 볼트 첨부 설정 */
+  async attachmentFolderFor(sampleName, sourceNotePath) {
+    const override = this.plugin.settings.attachmentSubfolder;
+    if (override)
+      return (0, import_obsidian3.normalizePath)(override);
+    const probe = await this.plugin.app.fileManager.getAvailablePathForAttachment(sampleName, sourceNotePath != null ? sourceNotePath : "");
+    const i = probe.lastIndexOf("/");
+    return i >= 0 ? probe.slice(0, i) : "";
   }
   async saveToVault(filename, buf, sourceNotePath) {
     const { app } = this.plugin;

@@ -83,6 +83,25 @@ export function makeNamedBaseName(originalName: string, rand: string): string {
   return stem ? `${stem}-${rand}` : `img-${rand}`;
 }
 
+function escapeRegExp(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
+ * 노트 제목 기반 이름: `{제목}_{n}.{ext}` — n은 기존 파일들의 최대 번호 +1.
+ * existingNames에는 대상 폴더의 파일명(경로 제외)들을 넘긴다.
+ */
+export function nextNoteImageName(noteTitle: string, existingNames: string[], ext: string): string {
+  const title = sanitizeFilename(noteTitle) || "img";
+  const re = new RegExp(`^${escapeRegExp(title)}_(\\d+)\\.`);
+  let max = 0;
+  for (const name of existingNames) {
+    const m = name.match(re);
+    if (m) max = Math.max(max, parseInt(m[1], 10));
+  }
+  return `${title}_${max + 1}.${ext}`;
+}
+
 /** R2 키: `{prefix}/{YYYY}/{MM}/{filename}` — prefix 비면 날짜부터 */
 export function makeR2Key(prefix: string, date: Date, filename: string): string {
   const y = date.getFullYear();

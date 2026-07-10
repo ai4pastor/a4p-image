@@ -11,6 +11,8 @@ export interface A4pImageSettings {
     publicBaseUrl: string;
     keyPrefix: string;
   };
+  /** 붙여넣기 파일명 규칙 — note: {노트제목}_{번호}, timestamp: img-날짜-시간 */
+  namingScheme: "note" | "timestamp";
   /** false = 클라우드 온리 (볼트에 백업을 남기지 않음) */
   localBackup: boolean;
   /** "" = 볼트 첨부 설정(getAvailablePathForAttachment)을 그대로 따름 */
@@ -37,6 +39,7 @@ export const DEFAULT_SETTINGS: A4pImageSettings = {
     publicBaseUrl: "",
     keyPrefix: "obsidian",
   },
+  namingScheme: "note",
   localBackup: true,
   attachmentSubfolder: "",
   fallbackToLocalEmbed: true,
@@ -159,6 +162,21 @@ export class A4pImageSettingTab extends PluginSettingTab {
     statusEl = containerEl.createDiv({ cls: "a4p-image-settings-status" });
 
     new Setting(containerEl).setName("동작").setHeading();
+
+    new Setting(containerEl)
+      .setName("붙여넣기 파일명 규칙")
+      .setDesc(
+        "노트 제목: 활성 노트 제목 뒤에 번호를 붙입니다 (예: 옵시디언_1.png, 옵시디언_2.png). " +
+          "타임스탬프: img-날짜-시간 형식. 로컬 파일명과 업로드 파일명이 동일하게 적용되며, 드롭한 파일은 원본 이름을 유지합니다.",
+      )
+      .addDropdown((drop) => {
+        drop.addOption("note", "노트 제목_번호");
+        drop.addOption("timestamp", "타임스탬프");
+        drop.setValue(this.plugin.settings.namingScheme).onChange(async (value) => {
+          this.plugin.settings.namingScheme = value as "note" | "timestamp";
+          await this.plugin.persist();
+        });
+      });
 
     new Setting(containerEl)
       .setName("로컬 백업 유지")

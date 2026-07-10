@@ -7,6 +7,7 @@ import {
   makeNamedBaseName,
   makeR2Key,
   mimeForExt,
+  nextNoteImageName,
   publicUrlFor,
   randSuffix,
   sanitizeFilename,
@@ -66,6 +67,30 @@ describe("이름 생성", () => {
     expect(stemOf("img.test.png")).toBe("img.test");
     expect(extOf("img.test.PNG")).toBe("png");
     expect(extOf("noext")).toBe("");
+  });
+});
+
+describe("nextNoteImageName", () => {
+  it("기존 파일이 없으면 _1부터 시작", () => {
+    expect(nextNoteImageName("옵시디언", [], "png")).toBe("옵시디언_1.png");
+  });
+
+  it("같은 제목의 최대 번호 +1 (확장자 달라도 카운트)", () => {
+    expect(
+      nextNoteImageName("옵시디언", ["옵시디언_1.png", "옵시디언_3.jpg", "다른노트_9.png", "옵시디언_노트.png"], "png"),
+    ).toBe("옵시디언_4.png");
+  });
+
+  it("번호에 빈 자리가 있어도 최대값 기준", () => {
+    expect(nextNoteImageName("설교", ["설교_5.png"], "webp")).toBe("설교_6.webp");
+  });
+
+  it("정규식 특수문자가 든 제목도 안전", () => {
+    expect(nextNoteImageName("칭의 (2)", ["칭의 (2)_1.png"], "png")).toBe("칭의 (2)_2.png");
+  });
+
+  it("금지 문자가 든 제목은 sanitize 후 번호 매김", () => {
+    expect(nextNoteImageName("설교: 요한복음", ["설교- 요한복음_2.png"], "png")).toBe("설교- 요한복음_3.png");
   });
 });
 
