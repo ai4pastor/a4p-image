@@ -62,7 +62,7 @@ export default class A4pImagePlugin extends Plugin {
     );
 
     this.registerView(VIEW_TYPE_A4P_IMAGE_GALLERY, (leaf) => new GalleryView(leaf, this));
-    this.addRibbonIcon("image", "A4P 이미지 갤러리", () => {
+    this.addRibbonIcon("image", "A4P Image 갤러리", () => {
       void this.activateGalleryView();
     });
 

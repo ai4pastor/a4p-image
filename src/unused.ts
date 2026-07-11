@@ -62,7 +62,7 @@ export function buildReportMarkdown(report: UnusedReport, now: Date): string {
     `# 미사용 이미지 리포트 (${dateStr})`,
     "",
     "> [!info] 이 리포트는 정보 제공용입니다. 어떤 파일도 자동으로 삭제·이동되지 않습니다.",
-    "> 정리하려면 명령 팔레트에서 **A4P 이미지: 미사용 이미지 휴지통 이동**을 실행해 직접 선택·승인하세요.",
+    "> 정리하려면 명령 팔레트에서 **A4P Image: 미사용 이미지 휴지통 이동**을 실행해 직접 선택·승인하세요.",
     "",
   ];
 

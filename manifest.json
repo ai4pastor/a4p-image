@@ -1,6 +1,6 @@
 {
   "id": "a4p-image",
-  "name": "A4P 이미지",
+  "name": "A4P Image",
   "version": "0.1.0",
   "minAppVersion": "1.5.0",
   "description": "붙여넣은 이미지를 Cloudflare R2에 자동 업로드하고 공개 URL로 삽입합니다. 갤러리·일괄 변환·미사용 이미지 관리 포함.",

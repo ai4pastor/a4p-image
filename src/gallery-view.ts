@@ -33,7 +33,7 @@ export class GalleryView extends ItemView {
   }
 
   getDisplayText(): string {
-    return "A4P 이미지 갤러리";
+    return "A4P Image 갤러리";
   }
 
   getIcon(): string {

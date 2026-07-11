@@ -16,7 +16,7 @@ export function registerPasteHandlers(plugin: A4pImagePlugin): void {
     if (!plugin.r2.isConfigured()) {
       if (!warnedNotConfigured) {
         warnedNotConfigured = true;
-        new Notice("A4P 이미지: R2 설정이 없어 기본 붙여넣기로 처리합니다. 설정에서 R2 정보를 입력하세요.");
+        new Notice("A4P Image: R2 설정이 없어 기본 붙여넣기로 처리합니다. 설정에서 R2 정보를 입력하세요.");
       }
       return false;
     }

@@ -959,7 +959,7 @@ function registerPasteHandlers(plugin) {
     if (!plugin.r2.isConfigured()) {
       if (!warnedNotConfigured) {
         warnedNotConfigured = true;
-        new import_obsidian4.Notice("A4P \uC774\uBBF8\uC9C0: R2 \uC124\uC815\uC774 \uC5C6\uC5B4 \uAE30\uBCF8 \uBD99\uC5EC\uB123\uAE30\uB85C \uCC98\uB9AC\uD569\uB2C8\uB2E4. \uC124\uC815\uC5D0\uC11C R2 \uC815\uBCF4\uB97C \uC785\uB825\uD558\uC138\uC694.");
+        new import_obsidian4.Notice("A4P Image: R2 \uC124\uC815\uC774 \uC5C6\uC5B4 \uAE30\uBCF8 \uBD99\uC5EC\uB123\uAE30\uB85C \uCC98\uB9AC\uD569\uB2C8\uB2E4. \uC124\uC815\uC5D0\uC11C R2 \uC815\uBCF4\uB97C \uC785\uB825\uD558\uC138\uC694.");
       }
       return false;
     }
@@ -1329,7 +1329,7 @@ function buildReportMarkdown(report, now) {
     `# \uBBF8\uC0AC\uC6A9 \uC774\uBBF8\uC9C0 \uB9AC\uD3EC\uD2B8 (${dateStr})`,
     "",
     "> [!info] \uC774 \uB9AC\uD3EC\uD2B8\uB294 \uC815\uBCF4 \uC81C\uACF5\uC6A9\uC785\uB2C8\uB2E4. \uC5B4\uB5A4 \uD30C\uC77C\uB3C4 \uC790\uB3D9\uC73C\uB85C \uC0AD\uC81C\xB7\uC774\uB3D9\uB418\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4.",
-    "> \uC815\uB9AC\uD558\uB824\uBA74 \uBA85\uB839 \uD314\uB808\uD2B8\uC5D0\uC11C **A4P \uC774\uBBF8\uC9C0: \uBBF8\uC0AC\uC6A9 \uC774\uBBF8\uC9C0 \uD734\uC9C0\uD1B5 \uC774\uB3D9**\uC744 \uC2E4\uD589\uD574 \uC9C1\uC811 \uC120\uD0DD\xB7\uC2B9\uC778\uD558\uC138\uC694.",
+    "> \uC815\uB9AC\uD558\uB824\uBA74 \uBA85\uB839 \uD314\uB808\uD2B8\uC5D0\uC11C **A4P Image: \uBBF8\uC0AC\uC6A9 \uC774\uBBF8\uC9C0 \uD734\uC9C0\uD1B5 \uC774\uB3D9**\uC744 \uC2E4\uD589\uD574 \uC9C1\uC811 \uC120\uD0DD\xB7\uC2B9\uC778\uD558\uC138\uC694.",
     ""
   ];
   lines.push(`## A. \uC644\uC804 \uBBF8\uC0AC\uC6A9 \uB85C\uCEEC \uC774\uBBF8\uC9C0 (${report.fullyUnused.length}\uAC1C)`);
@@ -1764,7 +1764,7 @@ var GalleryView = class extends import_obsidian10.ItemView {
     return VIEW_TYPE_A4P_IMAGE_GALLERY;
   }
   getDisplayText() {
-    return "A4P \uC774\uBBF8\uC9C0 \uAC24\uB7EC\uB9AC";
+    return "A4P Image \uAC24\uB7EC\uB9AC";
   }
   getIcon() {
     return "image";
@@ -2469,7 +2469,7 @@ var A4pImagePlugin = class extends import_obsidian14.Plugin {
       })
     );
     this.registerView(VIEW_TYPE_A4P_IMAGE_GALLERY, (leaf) => new GalleryView(leaf, this));
-    this.addRibbonIcon("image", "A4P \uC774\uBBF8\uC9C0 \uAC24\uB7EC\uB9AC", () => {
+    this.addRibbonIcon("image", "A4P Image \uAC24\uB7EC\uB9AC", () => {
       void this.activateGalleryView();
     });
     this.addCommand({
