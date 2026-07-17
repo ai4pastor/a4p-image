@@ -95,6 +95,18 @@ export class ManifestStore {
     this.scheduleSave();
   }
 
+  /** 엔트리 완전 제거 — 삭제 흐름(R2 삭제 + 로컬 휴지통 이동) 완료 후에만 호출 */
+  remove(id: string): void {
+    const entry = this.data.entries[id];
+    if (!entry) return;
+    delete this.data.entries[id];
+    if (entry.hash && this.hashIndex.get(entry.hash) === id) this.hashIndex.delete(entry.hash);
+    if (entry.localPath && this.localPathIndex.get(entry.localPath) === id) {
+      this.localPathIndex.delete(entry.localPath);
+    }
+    this.scheduleSave();
+  }
+
   /** vault rename 이벤트 → 로컬 백업 경로 추적 (paste-image-rename 등 외부 rename 방어) */
   handleRename(oldPath: string, newPath: string): void {
     const entry = this.byLocalPath(oldPath);

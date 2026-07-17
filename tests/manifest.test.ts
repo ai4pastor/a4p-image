@@ -102,6 +102,31 @@ describe("ManifestStore", () => {
     expect(store.get(entry.id)?.uploadedAt).toBe(123);
   });
 
+  it("remove — 엔트리와 인덱스를 함께 제거", async () => {
+    const io = memoryIO();
+    const store = new ManifestStore(io);
+    await store.load();
+    const entry = makeEntry();
+    store.add(entry);
+
+    store.remove(entry.id);
+    expect(store.get(entry.id)).toBeNull();
+    expect(store.byHash(entry.hash)).toBeNull();
+    expect(store.byLocalPath(entry.localPath!)).toBeNull();
+    expect(store.all()).toHaveLength(0);
+
+    await store.flush();
+    expect(io.content).not.toContain(entry.id);
+  });
+
+  it("remove — 없는 id는 no-op", async () => {
+    const store = new ManifestStore(memoryIO());
+    await store.load();
+    store.add(makeEntry());
+    store.remove("img-does-not-exist");
+    expect(store.all()).toHaveLength(1);
+  });
+
   it("손상된 JSON은 빈 매니페스트로 초기화", async () => {
     const store = new ManifestStore(memoryIO("{invalid json"));
     await store.load();

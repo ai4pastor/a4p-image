@@ -22,7 +22,7 @@ __export(main_exports, {
   default: () => A4pImagePlugin
 });
 module.exports = __toCommonJS(main_exports);
-var import_obsidian14 = require("obsidian");
+var import_obsidian17 = require("obsidian");
 
 // src/settings.ts
 var import_obsidian = require("obsidian");
@@ -47,6 +47,26 @@ var DEFAULT_SETTINGS = {
   fallbackToLocalEmbed: true,
   imageExtensions: ["png", "jpg", "jpeg", "gif", "webp", "svg", "bmp", "avif"],
   reportFolder: "",
+  includeAttachments: true,
+  attachmentExtensions: [
+    "pdf",
+    "mp3",
+    "m4a",
+    "wav",
+    "ogg",
+    "mp4",
+    "mov",
+    "webm",
+    "doc",
+    "docx",
+    "xls",
+    "xlsx",
+    "ppt",
+    "pptx",
+    "hwp",
+    "hwpx",
+    "zip"
+  ],
   eagle: {
     enabled: false,
     apiUrl: "http://localhost:41595",
@@ -181,12 +201,32 @@ var A4pImageSettingTab = class extends import_obsidian.PluginSettingTab {
         await this.plugin.persist();
       })
     );
-    new import_obsidian.Setting(containerEl).setName("\uB9AC\uD3EC\uD2B8 \uD3F4\uB354").setDesc("\uBBF8\uC0AC\uC6A9 \uC774\uBBF8\uC9C0 \uB9AC\uD3EC\uD2B8 \uB178\uD2B8\uB97C \uB9CC\uB4E4 \uD3F4\uB354\uC785\uB2C8\uB2E4. \uBE44\uC6B0\uBA74 \uBCFC\uD2B8 \uB8E8\uD2B8\uC5D0 \uB9CC\uB4ED\uB2C8\uB2E4.").addText(
+    new import_obsidian.Setting(containerEl).setName("\uB9AC\uD3EC\uD2B8 \uD3F4\uB354").setDesc("\uBBF8\uC0AC\uC6A9 \uC774\uBBF8\uC9C0\xB7\uCCA8\uBD80 \uB9AC\uD3EC\uD2B8 \uB178\uD2B8\uB97C \uB9CC\uB4E4 \uD3F4\uB354\uC785\uB2C8\uB2E4. \uBE44\uC6B0\uBA74 \uBCFC\uD2B8 \uB8E8\uD2B8\uC5D0 \uB9CC\uB4ED\uB2C8\uB2E4.").addText(
       (text) => text.setValue(this.plugin.settings.reportFolder).onChange(async (value) => {
         this.plugin.settings.reportFolder = value.trim();
         await this.plugin.persist();
       })
     );
+    new import_obsidian.Setting(containerEl).setName("\uBBF8\uC0AC\uC6A9 \uCCA8\uBD80 \uD30C\uC77C \uC815\uB9AC").setHeading();
+    new import_obsidian.Setting(containerEl).setName("\uCCA8\uBD80 \uD30C\uC77C\uB3C4 \uBD84\uC11D\uC5D0 \uD3EC\uD568").setDesc(
+      "\uBBF8\uC0AC\uC6A9 \uB9AC\uD3EC\uD2B8\xB7\uC815\uB9AC\uC5D0\uC11C \uC774\uBBF8\uC9C0 \uC678 \uCCA8\uBD80 \uD30C\uC77C(PDF\xB7\uC624\uB514\uC624 \uB4F1)\uB3C4 \uD568\uAED8 \uBD84\uC11D\uD569\uB2C8\uB2E4. \uC5B4\uB5A4 \uB178\uD2B8\uB3C4 \uB9C1\uD06C\xB7\uC784\uBCA0\uB4DC\uD558\uC9C0 \uC54A\uB294 \uD30C\uC77C\uB9CC \uD6C4\uBCF4\uC5D0 \uC624\uB974\uBA70, \uCE94\uBC84\uC2A4\uC5D0\uC11C \uC4F0\uB294 \uD30C\uC77C\uC740 \uBCF4\uD638\uB429\uB2C8\uB2E4. \uC815\uB9AC\uB294 \uD56D\uC0C1 \uBCFC\uD2B8 .trash/ \uC774\uB3D9(\uBCF5\uAD6C \uAC00\uB2A5)\uBFD0\uC785\uB2C8\uB2E4."
+    ).addToggle(
+      (toggle) => toggle.setValue(this.plugin.settings.includeAttachments).onChange(async (value) => {
+        this.plugin.settings.includeAttachments = value;
+        await this.plugin.persist();
+        this.display();
+      })
+    );
+    if (this.plugin.settings.includeAttachments) {
+      new import_obsidian.Setting(containerEl).setName("\uCCA8\uBD80\uB85C \uAC04\uC8FC\uD560 \uD655\uC7A5\uC790").setDesc(
+        "\uC27C\uD45C\uB85C \uAD6C\uBD84\uD569\uB2C8\uB2E4. \uC5EC\uAE30 \uB098\uC5F4\uB41C \uD655\uC7A5\uC790\uB9CC \uBD84\uC11D \uB300\uC0C1\uC774 \uB429\uB2C8\uB2E4 \u2014 \uB178\uD2B8(md)\xB7\uCE94\uBC84\uC2A4\xB7\uC124\uC815 \uD30C\uC77C \uB4F1\uC740 \uBAA9\uB85D\uC5D0 \uB123\uC9C0 \uB9C8\uC138\uC694."
+      ).addTextArea(
+        (text) => text.setPlaceholder(DEFAULT_SETTINGS.attachmentExtensions.join(", ")).setValue(this.plugin.settings.attachmentExtensions.join(", ")).onChange(async (value) => {
+          this.plugin.settings.attachmentExtensions = value.split(",").map((s) => s.trim().toLowerCase().replace(/^\./, "")).filter((s) => s.length > 0 && s !== "md" && s !== "canvas");
+          await this.plugin.persist();
+        })
+      );
+    }
     if (import_obsidian.Platform.isDesktopApp) {
       new import_obsidian.Setting(containerEl).setName("Eagle \uC5F0\uB3D9 (\uB370\uC2A4\uD06C\uD1B1 \uC804\uC6A9)").setHeading();
       new import_obsidian.Setting(containerEl).setName("Eagle \uC5F0\uB3D9 \uC0AC\uC6A9").setDesc("Eagle \uC571\uC774 \uC2E4\uD589 \uC911\uC77C \uB54C \uAC80\uC0C9\xB7\uB4F1\uB85D \uAE30\uB2A5\uC744 \uC0AC\uC6A9\uD569\uB2C8\uB2E4. Eagle\uC774 \uC5C6\uC73C\uBA74 \uC870\uC6A9\uD788 \uBE44\uD65C\uC131\uD654\uB429\uB2C8\uB2E4.").addToggle(
@@ -304,6 +344,19 @@ var ManifestStore = class {
       this.localPathIndex.set(entry.localPath, entry.id);
     if (entry.hash)
       this.hashIndex.set(entry.hash, entry.id);
+    this.scheduleSave();
+  }
+  /** 엔트리 완전 제거 — 삭제 흐름(R2 삭제 + 로컬 휴지통 이동) 완료 후에만 호출 */
+  remove(id) {
+    const entry = this.data.entries[id];
+    if (!entry)
+      return;
+    delete this.data.entries[id];
+    if (entry.hash && this.hashIndex.get(entry.hash) === id)
+      this.hashIndex.delete(entry.hash);
+    if (entry.localPath && this.localPathIndex.get(entry.localPath) === id) {
+      this.localPathIndex.delete(entry.localPath);
+    }
     this.scheduleSave();
   }
   /** vault rename 이벤트 → 로컬 백업 경로 추적 (paste-image-rename 등 외부 rename 방어) */
@@ -1239,7 +1292,7 @@ async function mapPool(items, limit, fn) {
 }
 
 // src/gallery-view.ts
-var import_obsidian10 = require("obsidian");
+var import_obsidian13 = require("obsidian");
 
 // src/insert.ts
 var import_obsidian6 = require("obsidian");
@@ -1288,12 +1341,18 @@ function insertAtEditor(app, text) {
 }
 
 // src/preview-modal.ts
-var import_obsidian9 = require("obsidian");
+var import_obsidian12 = require("obsidian");
 
 // src/commands.ts
-var import_obsidian8 = require("obsidian");
+var import_obsidian10 = require("obsidian");
 
 // src/unused.ts
+var REPORT_TAG = "a4p-image-report";
+function hasReportTag(tags) {
+  if (!tags)
+    return false;
+  return tags.some((t) => t.replace(/^#/, "") === REPORT_TAG);
+}
 function classifyUnused(input) {
   const entryByLocalPath = /* @__PURE__ */ new Map();
   for (const e of input.entries) {
@@ -1316,20 +1375,23 @@ function classifyUnused(input) {
   const cloudOrphans = input.entries.filter(
     (e) => e.status === "uploaded" && !e.localPath && !input.urlsInVault.has(e.url)
   );
-  return { fullyUnused, orphanedBackups, cloudOrphans };
+  const unusedAttachments = input.attachments.filter(
+    (a) => !input.resolvedTargets.has(a.path)
+  );
+  return { fullyUnused, orphanedBackups, cloudOrphans, unusedAttachments };
 }
 function buildReportMarkdown(report, now) {
-  const dateStr = now.toISOString().slice(0, 10);
+  const dateStr2 = now.toISOString().slice(0, 10);
   const lines = [
     "---",
     "tags:",
-    "  - a4p-image-report",
+    `  - ${REPORT_TAG}`,
     "---",
     "",
-    `# \uBBF8\uC0AC\uC6A9 \uC774\uBBF8\uC9C0 \uB9AC\uD3EC\uD2B8 (${dateStr})`,
+    `# \uBBF8\uC0AC\uC6A9 \uC774\uBBF8\uC9C0\xB7\uCCA8\uBD80 \uB9AC\uD3EC\uD2B8 (${dateStr2})`,
     "",
     "> [!info] \uC774 \uB9AC\uD3EC\uD2B8\uB294 \uC815\uBCF4 \uC81C\uACF5\uC6A9\uC785\uB2C8\uB2E4. \uC5B4\uB5A4 \uD30C\uC77C\uB3C4 \uC790\uB3D9\uC73C\uB85C \uC0AD\uC81C\xB7\uC774\uB3D9\uB418\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4.",
-    "> \uC815\uB9AC\uD558\uB824\uBA74 \uBA85\uB839 \uD314\uB808\uD2B8\uC5D0\uC11C **A4P Image: \uBBF8\uC0AC\uC6A9 \uC774\uBBF8\uC9C0 \uD734\uC9C0\uD1B5 \uC774\uB3D9**\uC744 \uC2E4\uD589\uD574 \uC9C1\uC811 \uC120\uD0DD\xB7\uC2B9\uC778\uD558\uC138\uC694.",
+    "> \uC815\uB9AC\uD558\uB824\uBA74 \uBA85\uB839 \uD314\uB808\uD2B8\uC5D0\uC11C **A4P Image: \uBBF8\uC0AC\uC6A9 \uC774\uBBF8\uC9C0\xB7\uCCA8\uBD80 \uD734\uC9C0\uD1B5 \uC774\uB3D9**\uC744 \uC2E4\uD589\uD574 \uC9C1\uC811 \uC120\uD0DD\xB7\uC2B9\uC778\uD558\uC138\uC694.",
     ""
   ];
   lines.push(`## A. \uC644\uC804 \uBBF8\uC0AC\uC6A9 \uB85C\uCEEC \uC774\uBBF8\uC9C0 (${report.fullyUnused.length}\uAC1C)`);
@@ -1362,7 +1424,7 @@ function buildReportMarkdown(report, now) {
   lines.push(`## C. R2\uC5D0\uB9CC \uB0A8\uC740 \uACE0\uC544 \uAC1D\uCCB4 (${report.cloudOrphans.length}\uAC1C)`);
   lines.push(
     "",
-    "\uB85C\uCEEC \uBC31\uC5C5\uC774 \uC5C6\uACE0 \uC5B4\uB5A4 \uB178\uD2B8\uC5D0\uC11C\uB3C4 URL\uC744 \uC4F0\uC9C0 \uC54A\uB294 \uD074\uB77C\uC6B0\uB4DC \uAC1D\uCCB4\uC785\uB2C8\uB2E4. \uC774 \uD50C\uB7EC\uADF8\uC778\uC740 R2 \uAC1D\uCCB4\uB97C \uC0AD\uC81C\uD558\uC9C0 \uC54A\uC73C\uBBC0\uB85C, \uD544\uC694\uD558\uBA74 Cloudflare \uB300\uC2DC\uBCF4\uB4DC\uC5D0\uC11C \uC9C1\uC811 \uC815\uB9AC\uD558\uC138\uC694.",
+    "\uB85C\uCEEC \uBC31\uC5C5\uC774 \uC5C6\uACE0 \uC5B4\uB5A4 \uB178\uD2B8\uC5D0\uC11C\uB3C4 URL\uC744 \uC4F0\uC9C0 \uC54A\uB294 \uD074\uB77C\uC6B0\uB4DC \uAC1D\uCCB4\uC785\uB2C8\uB2E4. **\uBBF8\uC0AC\uC6A9 \uC774\uBBF8\uC9C0 \uD734\uC9C0\uD1B5 \uC774\uB3D9** \uBA85\uB839\uC5D0\uC11C \uC120\uD0DD\xB7\uC774\uC911 \uD655\uC778 \uD6C4 R2\uC5D0\uC11C \uC0AD\uC81C\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.",
     ""
   );
   if (report.cloudOrphans.length > 0) {
@@ -1375,116 +1437,517 @@ function buildReportMarkdown(report, now) {
     lines.push("_\uC5C6\uC74C_");
   }
   lines.push("");
+  lines.push(`## D. \uB178\uD2B8\uC5D0 \uC5F0\uACB0\uB418\uC9C0 \uC54A\uC740 \uCCA8\uBD80 \uD30C\uC77C (${report.unusedAttachments.length}\uAC1C)`);
+  lines.push(
+    "",
+    "\uC5B4\uB5A4 \uB178\uD2B8\uB3C4 \uB9C1\uD06C\xB7\uC784\uBCA0\uB4DC\uD558\uC9C0 \uC54A\uB294 \uC774\uBBF8\uC9C0 \uC678 \uCCA8\uBD80 \uD30C\uC77C\uC785\uB2C8\uB2E4 (\uCE94\uBC84\uC2A4\uC5D0\uC11C \uC4F0\uB294 \uD30C\uC77C\uC740 \uC81C\uC678). \uC815\uB9AC \uC2DC \uBCFC\uD2B8 .trash/\uB85C\uB9CC \uC774\uB3D9\uD569\uB2C8\uB2E4.",
+    ""
+  );
+  if (report.unusedAttachments.length > 0) {
+    lines.push("| \uD30C\uC77C | \uD06C\uAE30 |", "| --- | --- |");
+    for (const a of report.unusedAttachments) {
+      lines.push(`| [[${a.path}]] | ${formatBytes(a.size)} |`);
+    }
+  } else {
+    lines.push("_\uC5C6\uC74C_");
+  }
+  lines.push("");
   return lines.join("\n");
 }
 
 // src/trash-modal.ts
+var import_obsidian9 = require("obsidian");
+
+// src/delete-plan.ts
+function buildDeletePlan(items, r2Configured) {
+  const planned = [];
+  const blocked = [];
+  for (const item of items) {
+    const entry = item.entry;
+    const needsR2 = !!entry && entry.status === "uploaded" && !!entry.r2Key;
+    const localPath = entry ? entry.localPath : item.path;
+    if (needsR2 && !r2Configured) {
+      if (localPath) {
+        planned.push({ item, deleteR2: false, trashLocal: true, removeEntry: false, localOnlyFallback: true });
+      } else {
+        blocked.push({ item, reason: "R2 \uC124\uC815\uC774 \uC5C6\uC5B4 \uC11C\uBC84 \uAC1D\uCCB4\uB97C \uC0AD\uC81C\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4." });
+      }
+      continue;
+    }
+    planned.push({
+      item,
+      deleteR2: needsR2,
+      trashLocal: !!localPath,
+      removeEntry: !!entry
+    });
+  }
+  return {
+    items: planned,
+    blocked,
+    r2Count: planned.filter((p) => p.deleteR2).length,
+    localCount: planned.filter((p) => p.trashLocal).length
+  };
+}
+function localPathOf(planned) {
+  return planned.item.entry ? planned.item.entry.localPath : planned.item.path;
+}
+
+// src/delete.ts
 var import_obsidian7 = require("obsidian");
-var TrashSelectModal = class extends import_obsidian7.Modal {
-  constructor(app, plugin, candidates) {
+async function executeDeletePlan(plugin, plan) {
+  const failures = [];
+  let done = 0;
+  for (const planned of plan.items) {
+    const entry = planned.item.entry;
+    if (planned.deleteR2 && entry) {
+      const shared = plugin.manifestStore.all().some((e) => e.id !== entry.id && e.r2Key === entry.r2Key);
+      if (!shared) {
+        try {
+          await plugin.r2.deleteObject(entry.r2Key);
+        } catch (e) {
+          failures.push({
+            path: planned.item.path,
+            stage: "r2",
+            error: e instanceof Error ? e.message : String(e)
+          });
+          continue;
+        }
+      }
+    }
+    if (planned.trashLocal) {
+      const localPath = localPathOf(planned);
+      const file = localPath ? plugin.app.vault.getAbstractFileByPath(localPath) : null;
+      if (file instanceof import_obsidian7.TFile) {
+        try {
+          await plugin.app.vault.trash(file, false);
+        } catch (e) {
+          failures.push({
+            path: planned.item.path,
+            stage: "local",
+            error: e instanceof Error ? e.message : String(e)
+          });
+        }
+      }
+    }
+    if (planned.removeEntry && entry) {
+      plugin.manifestStore.remove(entry.id);
+    }
+    done++;
+  }
+  await plugin.manifestStore.flush();
+  plugin.refreshGalleryViews();
+  let msg = `${done}\uAC1C \uD56D\uBAA9 \uC815\uB9AC \uC644\uB8CC`;
+  if (plan.r2Count > 0)
+    msg += ` (\uC11C\uBC84 \uC0AD\uC81C ${plan.r2Count}\uAC1C \uD3EC\uD568)`;
+  msg += ".";
+  if (failures.length > 0) {
+    msg += ` \uC2E4\uD328 ${failures.length}\uAC74 (\uCF58\uC194 \uCC38\uACE0).`;
+    console.error(
+      "[a4p-image] \uC0AD\uC81C \uC2E4\uD328:\n" + failures.map((f) => `${f.path} [${f.stage}]: ${f.error}`).join("\n")
+    );
+  }
+  new import_obsidian7.Notice(msg, 8e3);
+  return { done, failures };
+}
+
+// src/thumb.ts
+var import_obsidian8 = require("obsidian");
+function attachmentIconFor(ext) {
+  const e = ext.toLowerCase();
+  if (["mp3", "m4a", "wav", "ogg", "flac"].includes(e))
+    return "file-audio";
+  if (["mp4", "mov", "webm", "mkv", "avi"].includes(e))
+    return "file-video";
+  if (["zip", "7z", "rar", "gz"].includes(e))
+    return "file-archive";
+  if (["xls", "xlsx", "csv"].includes(e))
+    return "file-spreadsheet";
+  if (["pdf", "doc", "docx", "ppt", "pptx", "hwp", "hwpx", "epub"].includes(e))
+    return "file-text";
+  return "paperclip";
+}
+function resolveImageSrc(app, localPath, url) {
+  if (localPath) {
+    const file = app.vault.getAbstractFileByPath(localPath);
+    if (file instanceof import_obsidian8.TFile)
+      return app.vault.getResourcePath(file);
+  }
+  return url || null;
+}
+function renderThumb(app, parent, source, opts = {}) {
+  const wrap = parent.createDiv({
+    cls: `a4p-image-trash-thumb${opts.small ? " a4p-image-trash-thumb--sm" : ""}`
+  });
+  if (source.icon) {
+    (0, import_obsidian8.setIcon)(wrap.createSpan({ cls: "a4p-image-trash-thumb-fallback" }), source.icon);
+    return wrap;
+  }
+  const src = resolveImageSrc(app, source.localPath, source.url);
+  if (!src) {
+    (0, import_obsidian8.setIcon)(wrap.createSpan({ cls: "a4p-image-trash-thumb-fallback" }), "image-off");
+    wrap.title = "\uBBF8\uB9AC\uBCF4\uAE30\uB97C \uD45C\uC2DC\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4";
+    return wrap;
+  }
+  const img = wrap.createEl("img");
+  img.src = src;
+  img.alt = source.name;
+  img.addEventListener("error", () => {
+    wrap.empty();
+    (0, import_obsidian8.setIcon)(wrap.createSpan({ cls: "a4p-image-trash-thumb-fallback" }), "image-off");
+    wrap.title = "\uC774\uBBF8\uC9C0\uB97C \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4";
+  });
+  wrap.addClass("is-zoomable");
+  wrap.title = "\uD074\uB9AD\uD558\uBA74 \uD06C\uAC8C \uBD05\uB2C8\uB2E4";
+  wrap.addEventListener("click", (evt) => {
+    evt.stopPropagation();
+    new ImageZoomModal(app, source).open();
+  });
+  return wrap;
+}
+var ImageZoomModal = class extends import_obsidian8.Modal {
+  constructor(app, source) {
     super(app);
-    this.plugin = plugin;
-    this.candidates = candidates;
-    this.selected = /* @__PURE__ */ new Set();
+    this.source = source;
   }
   onOpen() {
+    this.modalEl.addClass("a4p-img-preview-host");
     const { contentEl } = this;
     contentEl.empty();
-    contentEl.createEl("h3", { text: "\uBBF8\uC0AC\uC6A9 \uC774\uBBF8\uC9C0 \uD734\uC9C0\uD1B5 \uC774\uB3D9" });
-    contentEl.createEl("p", {
-      text: `\uBBF8\uC0AC\uC6A9\uC73C\uB85C \uD310\uC815\uB41C \uC774\uBBF8\uC9C0 ${this.candidates.length}\uAC1C\uC785\uB2C8\uB2E4. \uC774\uB3D9\uD560 \uD56D\uBAA9\uC744 \uC9C1\uC811 \uC120\uD0DD\uD558\uC138\uC694.`
-    });
-    contentEl.createEl("p", {
-      cls: "a4p-image-trash-warning",
-      text: "\uC120\uD0DD\uD55C \uD30C\uC77C\uC740 \uC0AD\uC81C\uB418\uC9C0 \uC54A\uACE0 \uBCFC\uD2B8\uC758 .trash/ \uD3F4\uB354\uB85C \uC774\uB3D9\uD569\uB2C8\uB2E4 (\uBCF5\uAD6C \uAC00\uB2A5)."
-    });
-    const listEl = contentEl.createDiv({ cls: "a4p-image-plan-list" });
-    const selectAll = listEl.createDiv({ cls: "a4p-image-plan-item" });
-    const allCheckbox = selectAll.createEl("input", { type: "checkbox" });
-    selectAll.createSpan({ text: "\uBAA8\uB450 \uC120\uD0DD" });
-    const itemCheckboxes = [];
-    allCheckbox.addEventListener("change", () => {
-      for (const cb of itemCheckboxes) {
-        cb.checked = allCheckbox.checked;
-        cb.dispatchEvent(new Event("change"));
-      }
-    });
-    for (const cand of this.candidates) {
-      const item = listEl.createDiv({ cls: "a4p-image-plan-item" });
-      const cb = item.createEl("input", { type: "checkbox" });
-      itemCheckboxes.push(cb);
-      item.createSpan({ text: `${cand.path} (${formatBytes(cand.size)})` });
-      item.createSpan({ cls: "dedup", text: cand.reason });
-      cb.addEventListener("change", () => {
-        if (cb.checked)
-          this.selected.add(cand.path);
-        else
-          this.selected.delete(cand.path);
-      });
+    contentEl.addClass("a4p-img-preview");
+    const imgWrap = contentEl.createDiv({ cls: "a4p-img-preview-imgwrap" });
+    const src = resolveImageSrc(this.app, this.source.localPath, this.source.url);
+    if (src) {
+      const img = imgWrap.createEl("img");
+      img.src = src;
+      img.alt = this.source.name;
+    } else {
+      (0, import_obsidian8.setIcon)(imgWrap.createSpan({ cls: "a4p-image-trash-thumb-fallback" }), "image-off");
     }
-    const buttons = contentEl.createDiv({ cls: "a4p-image-modal-buttons" });
-    const cancelBtn = buttons.createEl("button", { text: "\uCDE8\uC18C" });
-    cancelBtn.addEventListener("click", () => this.close());
-    const moveBtn = buttons.createEl("button", { text: "\uC120\uD0DD \uD56D\uBAA9 \uD734\uC9C0\uD1B5 \uC774\uB3D9\u2026", cls: "mod-warning" });
-    moveBtn.addEventListener("click", () => {
-      if (this.selected.size === 0) {
-        new import_obsidian7.Notice("\uC120\uD0DD\uB41C \uD56D\uBAA9\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.");
-        return;
-      }
-      this.close();
-      new TrashConfirmModal(this.app, this.plugin, [...this.selected]).open();
-    });
+    const body = contentEl.createDiv({ cls: "a4p-img-preview-body" });
+    body.createDiv({ cls: "a4p-img-preview-name", text: this.source.name });
+    body.createDiv({ cls: "a4p-img-preview-sub", text: formatBytes(this.source.size) });
   }
   onClose() {
     this.contentEl.empty();
   }
 };
-var TrashConfirmModal = class extends import_obsidian7.Modal {
-  constructor(app, plugin, paths) {
+
+// src/trash-modal.ts
+function keyOf(item) {
+  var _a, _b;
+  return (_b = (_a = item.entry) == null ? void 0 : _a.id) != null ? _b : item.path;
+}
+function nameOf(path) {
+  const i = path.lastIndexOf("/");
+  return i >= 0 ? path.slice(i + 1) : path;
+}
+function extOf2(path) {
+  const name = nameOf(path);
+  const i = name.lastIndexOf(".");
+  return i >= 0 ? name.slice(i + 1) : "";
+}
+function thumbSourceOf(cand) {
+  var _a, _b;
+  const localPath = cand.entry ? cand.entry.localPath : cand.path;
+  const source = {
+    localPath,
+    url: (_b = (_a = cand.entry) == null ? void 0 : _a.url) != null ? _b : null,
+    name: nameOf(cand.path),
+    size: cand.size
+  };
+  if (cand.kind === "unused-attachment")
+    source.icon = attachmentIconFor(extOf2(cand.path));
+  return source;
+}
+function dateStr(ms) {
+  if (!ms)
+    return null;
+  return new Date(ms).toLocaleDateString("ko-KR", { dateStyle: "medium" });
+}
+var SECTIONS = [
+  {
+    kind: "fully-unused",
+    title: "\uC644\uC804 \uBBF8\uC0AC\uC6A9 \uB85C\uCEEC \uC774\uBBF8\uC9C0",
+    desc: "\uC5B4\uB5A4 \uB178\uD2B8\uB3C4 \uC774 \uD30C\uC77C\uC744 \uCC38\uC870\uD558\uC9C0 \uC54A\uACE0, \uD074\uB77C\uC6B0\uB4DC \uC5C5\uB85C\uB4DC \uAE30\uB85D\uB3C4 \uC5C6\uC2B5\uB2C8\uB2E4.",
+    treat: () => "\uC815\uB9AC \uC2DC \uB85C\uCEEC \uD30C\uC77C\uB9CC \uBCFC\uD2B8 .trash/\uB85C \uC774\uB3D9\uD569\uB2C8\uB2E4 \u2014 \uC5B8\uC81C\uB4E0 \uBCF5\uAD6C\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4."
+  },
+  {
+    kind: "orphaned-backup",
+    title: "\uB178\uD2B8\uC5D0\uC11C URL\uC774 \uC0AC\uB77C\uC9C4 \uBC31\uC5C5",
+    desc: "R2\uC5D0 \uC5C5\uB85C\uB4DC\uB410\uC9C0\uB9CC \uC774\uC81C \uC5B4\uB5A4 \uB178\uD2B8\uC5D0\uB3C4 \uD574\uB2F9 URL\uC774 \uB0A8\uC544 \uC788\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4 (\uB178\uD2B8\uC5D0\uC11C \uC774\uBBF8\uC9C0\uB97C \uC9C0\uC6B4 \uD754\uC801).",
+    treat: (r2Ok) => r2Ok ? "\uC815\uB9AC \uC2DC \uC11C\uBC84(R2) \uC6D0\uBCF8\uC740 \uC601\uAD6C \uC0AD\uC81C\uB418\uACE0(\uBCF5\uAD6C \uBD88\uAC00), \uB85C\uCEEC \uBC31\uC5C5\uC740 .trash/\uB85C \uC774\uB3D9\uD569\uB2C8\uB2E4(\uBCF5\uAD6C \uAC00\uB2A5)." : "R2 \uC124\uC815\uC774 \uC5C6\uC5B4 \uC815\uB9AC \uC2DC \uB85C\uCEEC \uBC31\uC5C5\uB9CC .trash/\uB85C \uC774\uB3D9\uD569\uB2C8\uB2E4 (\uC11C\uBC84 \uAC1D\uCCB4\xB7\uAC24\uB7EC\uB9AC \uAE30\uB85D \uC720\uC9C0)."
+  },
+  {
+    kind: "cloud-orphan",
+    title: "\uC11C\uBC84\uC5D0\uB9CC \uB0A8\uC740 \uACE0\uC544 \uAC1D\uCCB4",
+    desc: "\uB85C\uCEEC \uBC31\uC5C5\uC774 \uC5C6\uACE0, \uC5B4\uB5A4 \uB178\uD2B8\uC5D0\uC11C\uB3C4 URL\uC744 \uC4F0\uC9C0 \uC54A\uB294 \uD074\uB77C\uC6B0\uB4DC \uAC1D\uCCB4\uC785\uB2C8\uB2E4.",
+    treat: () => "\uC815\uB9AC \uC2DC R2 \uC11C\uBC84\uC5D0\uC11C \uC601\uAD6C \uC0AD\uC81C\uB429\uB2C8\uB2E4 \u2014 \uBCF5\uAD6C\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4."
+  },
+  {
+    kind: "unused-attachment",
+    title: "\uB178\uD2B8\uC5D0 \uC5F0\uACB0\uB418\uC9C0 \uC54A\uC740 \uCCA8\uBD80 \uD30C\uC77C",
+    desc: "\uC5B4\uB5A4 \uB178\uD2B8\uB3C4 \uB9C1\uD06C\xB7\uC784\uBCA0\uB4DC\uD558\uC9C0 \uC54A\uB294 \uC774\uBBF8\uC9C0 \uC678 \uCCA8\uBD80(PDF\xB7\uC624\uB514\uC624 \uB4F1)\uC785\uB2C8\uB2E4. \uCE94\uBC84\uC2A4\uC5D0\uC11C \uC4F0\uB294 \uD30C\uC77C\uC740 \uC81C\uC678\uD588\uC2B5\uB2C8\uB2E4.",
+    treat: () => "\uC815\uB9AC \uC2DC \uB85C\uCEEC \uD30C\uC77C\uB9CC \uBCFC\uD2B8 .trash/\uB85C \uC774\uB3D9\uD569\uB2C8\uB2E4 \u2014 \uC5B8\uC81C\uB4E0 \uBCF5\uAD6C\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4. (\uC11C\uBC84\xB7\uAC24\uB7EC\uB9AC\uC640 \uBB34\uAD00)"
+  }
+];
+var TrashSelectModal = class extends import_obsidian9.Modal {
+  constructor(app, plugin, candidates) {
     super(app);
     this.plugin = plugin;
-    this.paths = paths;
+    this.candidates = candidates;
+    this.selected = /* @__PURE__ */ new Set();
+    this.proceedBtn = null;
   }
   onOpen() {
+    this.modalEl.addClass("a4p-image-trash-host");
     const { contentEl } = this;
     contentEl.empty();
-    contentEl.createEl("h3", { text: "\uCD5C\uC885 \uD655\uC778" });
-    contentEl.createEl("p", { text: `\uB2E4\uC74C ${this.paths.length}\uAC1C \uD30C\uC77C\uC744 \uBCFC\uD2B8 .trash/ \uD3F4\uB354\uB85C \uC774\uB3D9\uD569\uB2C8\uB2E4:` });
-    const listEl = contentEl.createDiv({ cls: "a4p-image-plan-list" });
-    for (const p of this.paths) {
-      listEl.createDiv({ cls: "a4p-image-plan-item", text: p });
+    contentEl.createEl("h3", { text: "\uBBF8\uC0AC\uC6A9 \uC774\uBBF8\uC9C0\xB7\uCCA8\uBD80 \uC815\uB9AC" });
+    contentEl.createEl("p", {
+      cls: "a4p-image-trash-lead",
+      text: `\uBBF8\uC0AC\uC6A9\uC73C\uB85C \uD310\uC815\uB41C \uD56D\uBAA9 ${this.candidates.length}\uAC1C\uC785\uB2C8\uB2E4. \uC378\uB124\uC77C\uC744 \uD074\uB9AD\uD558\uBA74 \uD06C\uAC8C \uBCFC \uC218 \uC788\uACE0, \u25BE\uB97C \uD3BC\uCE58\uBA74 \uD310\uC815 \uADFC\uAC70\uC640 \uCC98\uB9AC \uB0B4\uC6A9\uC744 \uD655\uC778\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.`
+    });
+    contentEl.createEl("p", {
+      cls: "a4p-image-trash-warning",
+      text: "\uC120\uD0DD\uD55C \uD56D\uBAA9\uB9CC \uC815\uB9AC\uB418\uBA70, \uC2E4\uD589 \uC804 \uCD5C\uC885 \uD655\uC778\uC744 \uD55C \uBC88 \uB354 \uAC70\uCE69\uB2C8\uB2E4. \uC11C\uBC84(R2) \uC0AD\uC81C\uAC00 \uD3EC\uD568\uB41C \uD56D\uBAA9\uC740 \uBD89\uC740 \uB760\uB85C \uD45C\uC2DC\uB429\uB2C8\uB2E4."
+    });
+    const r2Ok = this.plugin.r2.isConfigured();
+    const listEl = contentEl.createDiv({ cls: "a4p-image-plan-list a4p-image-trash-list" });
+    const allCheckboxes = [];
+    const globalRow = listEl.createDiv({ cls: "a4p-image-trash-selectall" });
+    const globalCb = globalRow.createEl("input", { type: "checkbox" });
+    globalRow.createSpan({ text: "\uBAA8\uB450 \uC120\uD0DD" });
+    globalCb.addEventListener("change", () => {
+      for (const cb of allCheckboxes) {
+        cb.checked = globalCb.checked;
+        cb.dispatchEvent(new Event("change"));
+      }
+    });
+    for (const spec of SECTIONS) {
+      const group = this.candidates.filter((c) => c.kind === spec.kind);
+      if (group.length === 0)
+        continue;
+      this.renderSection(listEl, spec, group, r2Ok, allCheckboxes);
     }
     const buttons = contentEl.createDiv({ cls: "a4p-image-modal-buttons" });
     const cancelBtn = buttons.createEl("button", { text: "\uCDE8\uC18C" });
     cancelBtn.addEventListener("click", () => this.close());
-    const confirmBtn = buttons.createEl("button", { text: `${this.paths.length}\uAC1C \uC774\uB3D9 \uC2E4\uD589`, cls: "mod-warning" });
-    confirmBtn.addEventListener("click", () => {
+    this.proceedBtn = buttons.createEl("button", { text: "\uC120\uD0DD \uD56D\uBAA9 \uC815\uB9AC\u2026", cls: "mod-warning" });
+    this.proceedBtn.addEventListener("click", () => {
+      if (this.selected.size === 0) {
+        new import_obsidian9.Notice("\uC120\uD0DD\uB41C \uD56D\uBAA9\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.");
+        return;
+      }
+      const picked = this.candidates.filter((c) => this.selected.has(keyOf(c)));
       this.close();
-      void this.execute();
+      new TrashConfirmModal(this.app, this.plugin, picked).open();
     });
   }
-  async execute() {
-    let moved = 0;
-    const failures = [];
-    for (const path of this.paths) {
-      const file = this.plugin.app.vault.getAbstractFileByPath(path);
-      if (!(file instanceof import_obsidian7.TFile)) {
-        failures.push(`${path}: \uD30C\uC77C\uC744 \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.`);
-        continue;
+  updateProceedLabel() {
+    if (!this.proceedBtn)
+      return;
+    this.proceedBtn.setText(
+      this.selected.size > 0 ? `\uC120\uD0DD \uD56D\uBAA9 \uC815\uB9AC (${this.selected.size}\uAC1C)\u2026` : "\uC120\uD0DD \uD56D\uBAA9 \uC815\uB9AC\u2026"
+    );
+  }
+  renderSection(parent, spec, group, r2Ok, allCheckboxes) {
+    const section = parent.createDiv({ cls: "a4p-image-trash-section" });
+    const header = section.createDiv({ cls: "a4p-image-trash-section-head" });
+    const sectionCb = header.createEl("input", { type: "checkbox" });
+    sectionCb.title = "\uC774 \uBD84\uB958 \uBAA8\uB450 \uC120\uD0DD";
+    header.createSpan({ cls: "a4p-image-trash-section-title", text: spec.title });
+    header.createSpan({ cls: "a4p-image-trash-count", text: String(group.length) });
+    section.createDiv({ cls: "a4p-image-trash-section-desc", text: spec.desc });
+    section.createDiv({ cls: "a4p-image-trash-section-treat", text: spec.treat(r2Ok) });
+    const sectionCheckboxes = [];
+    sectionCb.addEventListener("change", () => {
+      for (const cb of sectionCheckboxes) {
+        cb.checked = sectionCb.checked;
+        cb.dispatchEvent(new Event("change"));
       }
-      try {
-        await this.plugin.app.vault.trash(file, false);
-        moved++;
-      } catch (e) {
-        failures.push(`${path}: ${e instanceof Error ? e.message : String(e)}`);
+    });
+    for (const cand of group) {
+      const cb = this.renderItem(section, cand, r2Ok);
+      sectionCheckboxes.push(cb);
+      allCheckboxes.push(cb);
+    }
+  }
+  /** 항목 카드 — [체크박스][썸네일][이름·메타][배지][▾], 펼치면 판정 근거 + 처리 상세 */
+  renderItem(parent, cand, r2Ok) {
+    var _a, _b;
+    const serverDelete = r2Ok && ((_a = cand.entry) == null ? void 0 : _a.status) === "uploaded" && !!cand.entry.r2Key;
+    const item = parent.createDiv({
+      cls: `a4p-image-trash-item ${serverDelete ? "is-server" : "is-local"}`
+    });
+    const row = item.createDiv({ cls: "a4p-image-trash-row" });
+    const cb = row.createEl("input", { type: "checkbox" });
+    cb.addEventListener("change", () => {
+      if (cb.checked)
+        this.selected.add(keyOf(cand));
+      else
+        this.selected.delete(keyOf(cand));
+      item.toggleClass("is-selected", cb.checked);
+      this.updateProceedLabel();
+    });
+    cb.addEventListener("click", (evt) => evt.stopPropagation());
+    renderThumb(this.app, row, thumbSourceOf(cand));
+    const info = row.createDiv({ cls: "a4p-image-trash-info" });
+    info.createDiv({ cls: "a4p-image-trash-name", text: nameOf(cand.path) });
+    const metaParts = [formatBytes(cand.size)];
+    const uploaded = dateStr((_b = cand.entry) == null ? void 0 : _b.uploadedAt);
+    if (uploaded)
+      metaParts.push(`\uC5C5\uB85C\uB4DC ${uploaded}`);
+    info.createDiv({ cls: "a4p-image-trash-meta", text: metaParts.join(" \xB7 ") });
+    if (serverDelete) {
+      row.createSpan({ cls: "a4p-image-badge-server", text: "\uC11C\uBC84 \uC0AD\uC81C" });
+    }
+    const toggleBtn = row.createEl("button", { cls: "a4p-image-trash-toggle" });
+    toggleBtn.title = "\uD310\uC815 \uADFC\uAC70\xB7\uCC98\uB9AC \uB0B4\uC6A9 \uBCF4\uAE30";
+    (0, import_obsidian9.setIcon)(toggleBtn, "chevron-down");
+    const detail = item.createDiv({ cls: "a4p-image-trash-detail" });
+    this.renderDetail(detail, cand, serverDelete);
+    toggleBtn.addEventListener("click", (evt) => {
+      evt.stopPropagation();
+      item.toggleClass("is-open", !item.hasClass("is-open"));
+    });
+    row.addEventListener("click", () => {
+      cb.checked = !cb.checked;
+      cb.dispatchEvent(new Event("change"));
+    });
+    return cb;
+  }
+  detailRow(parent, icon, text) {
+    const row = parent.createDiv({ cls: "a4p-image-trash-detail-row" });
+    (0, import_obsidian9.setIcon)(row.createSpan({ cls: "a4p-image-trash-detail-icon" }), icon);
+    row.createSpan({ text });
+    return row;
+  }
+  renderDetail(parent, cand, serverDelete) {
+    var _a, _b;
+    parent.createDiv({ cls: "a4p-image-trash-detail-title", text: "\uAE68\uC9C4 \uC5F0\uACB0" });
+    if (cand.kind === "fully-unused" || cand.kind === "unused-attachment") {
+      this.detailRow(
+        parent,
+        "unlink",
+        cand.kind === "unused-attachment" ? "\uB9C1\uD06C\xB7\uC784\uBCA0\uB4DC\uD558\uB294 \uB178\uD2B8 \uC5C6\uC74C (\uCE94\uBC84\uC2A4 \uC0AC\uC6A9\uCC98\uB3C4 \uC5C6\uC74C)" : "\uCC38\uC870\uD558\uB294 \uB178\uD2B8 \uC5C6\uC74C \u2014 \uC704\uD0A4\uB9C1\uD06C 0\uAC1C \xB7 \uC5C5\uB85C\uB4DC \uAE30\uB85D \uC5C6\uC74C"
+      );
+      this.detailRow(parent, "file-question", `\uC804\uCCB4 \uACBD\uB85C: ${cand.path}`);
+      if (cand.kind === "unused-attachment") {
+        const row = parent.createDiv({ cls: "a4p-image-trash-detail-row" });
+        (0, import_obsidian9.setIcon)(row.createSpan({ cls: "a4p-image-trash-detail-icon" }), "external-link");
+        const link = row.createEl("a", { text: "\uD30C\uC77C \uC5F4\uC5B4\uC11C \uD655\uC778", cls: "a4p-image-trash-detail-link" });
+        link.addEventListener("click", (evt) => {
+          evt.preventDefault();
+          evt.stopPropagation();
+          this.close();
+          void this.app.workspace.openLinkText(cand.path, "", false);
+        });
+      }
+    } else {
+      this.detailRow(
+        parent,
+        "unlink",
+        cand.kind === "cloud-orphan" ? "\uB85C\uCEEC \uBC31\uC5C5 \uC5C6\uC74C \xB7 \uC774 URL\uC744 \uC4F0\uB294 \uB178\uD2B8 \uC5C6\uC74C" : "\uC774 \uC774\uBBF8\uC9C0\uC758 URL\uC744 \uC4F0\uB294 \uB178\uD2B8 \uC5C6\uC74C (\uC704\uD0A4\uB9C1\uD06C \uCC38\uC870\uB3C4 \uC5C6\uC74C)"
+      );
+      const sourceNote = (_a = cand.entry) == null ? void 0 : _a.sourceNote;
+      if (sourceNote) {
+        const row = parent.createDiv({ cls: "a4p-image-trash-detail-row" });
+        (0, import_obsidian9.setIcon)(row.createSpan({ cls: "a4p-image-trash-detail-icon" }), "file-text");
+        row.createSpan({ text: "\uC6D0\uB798 \uC0BD\uC785\uB41C \uB178\uD2B8: " });
+        if (this.app.vault.getAbstractFileByPath(sourceNote)) {
+          const link = row.createEl("a", { text: sourceNote, cls: "a4p-image-trash-detail-link" });
+          link.addEventListener("click", (evt) => {
+            evt.preventDefault();
+            evt.stopPropagation();
+            this.close();
+            void this.app.workspace.openLinkText(sourceNote, "", false);
+          });
+        } else {
+          row.createSpan({ cls: "a4p-image-trash-detail-muted", text: `${sourceNote} (\uC0AD\uC81C\uB428)` });
+        }
+      }
+      if ((_b = cand.entry) == null ? void 0 : _b.url) {
+        this.detailRow(parent, "link", cand.entry.url);
       }
     }
-    let msg = `${moved}\uAC1C \uD30C\uC77C\uC744 .trash/\uB85C \uC774\uB3D9\uD588\uC2B5\uB2C8\uB2E4.`;
-    if (failures.length > 0) {
-      msg += ` \uC2E4\uD328 ${failures.length}\uAC74 (\uCF58\uC194 \uCC38\uACE0).`;
-      console.error("[a4p-image] \uD734\uC9C0\uD1B5 \uC774\uB3D9 \uC2E4\uD328:\n" + failures.join("\n"));
+    parent.createDiv({ cls: "a4p-image-trash-detail-title", text: "\uCC98\uB9AC \uBC29\uBC95" });
+    if (cand.kind === "fully-unused") {
+      this.detailRow(parent, "trash-2", "\uC815\uB9AC \uC2DC: \uB85C\uCEEC \uD30C\uC77C\uC744 \uBCFC\uD2B8 .trash/\uB85C \uC774\uB3D9 (\uC5B8\uC81C\uB4E0 \uBCF5\uAD6C \uAC00\uB2A5)");
+      this.detailRow(parent, "lightbulb", "\uACC4\uC18D \uC4F0\uB824\uBA74: \uB178\uD2B8\uC5D0 ![[\uD30C\uC77C\uBA85]]\uC73C\uB85C \uC784\uBCA0\uB4DC\uD558\uBA74 '\uC0AC\uC6A9 \uC911'\uC73C\uB85C \uBCF4\uD638\uB429\uB2C8\uB2E4");
+    } else if (cand.kind === "unused-attachment") {
+      this.detailRow(parent, "trash-2", "\uC815\uB9AC \uC2DC: \uB85C\uCEEC \uD30C\uC77C\uC744 \uBCFC\uD2B8 .trash/\uB85C \uC774\uB3D9 (\uC5B8\uC81C\uB4E0 \uBCF5\uAD6C \uAC00\uB2A5) \u2014 \uC11C\uBC84 \uC5C5\uB85C\uB4DC\uC640 \uBB34\uAD00");
+      this.detailRow(parent, "lightbulb", "\uACC4\uC18D \uC4F0\uB824\uBA74: \uB178\uD2B8\uC5D0 [[\uD30C\uC77C\uBA85]] \uB9C1\uD06C \uB610\uB294 ![[\uD30C\uC77C\uBA85]] \uC784\uBCA0\uB4DC\uB97C \uCD94\uAC00\uD558\uBA74 '\uC0AC\uC6A9 \uC911'\uC73C\uB85C \uBCF4\uD638\uB429\uB2C8\uB2E4");
+    } else if (cand.kind === "orphaned-backup") {
+      if (serverDelete) {
+        this.detailRow(parent, "trash-2", "\uC815\uB9AC \uC2DC: \uC11C\uBC84(R2) \uC6D0\uBCF8 \uC601\uAD6C \uC0AD\uC81C(\uBCF5\uAD6C \uBD88\uAC00) + \uB85C\uCEEC \uBC31\uC5C5 .trash/ \uC774\uB3D9(\uBCF5\uAD6C \uAC00\uB2A5) + \uAC24\uB7EC\uB9AC \uAE30\uB85D \uC81C\uAC70");
+      } else {
+        this.detailRow(parent, "trash-2", "\uC815\uB9AC \uC2DC: \uB85C\uCEEC \uBC31\uC5C5\uB9CC .trash/\uB85C \uC774\uB3D9 (\uC11C\uBC84 \uAC1D\uCCB4\xB7\uAC24\uB7EC\uB9AC \uAE30\uB85D \uC720\uC9C0)");
+      }
+      this.detailRow(parent, "lightbulb", "\uACC4\uC18D \uC4F0\uB824\uBA74: \uAC24\uB7EC\uB9AC\uC5D0\uC11C \uC774 \uC774\uBBF8\uC9C0\uB97C \uB178\uD2B8\uC5D0 \uC0BD\uC785\uD558\uC138\uC694 \u2014 URL\uC774 \uB178\uD2B8\uC5D0 \uC788\uC73C\uBA74 '\uC0AC\uC6A9 \uC911'\uC73C\uB85C \uBCF4\uD638\uB429\uB2C8\uB2E4");
+    } else {
+      this.detailRow(parent, "trash-2", "\uC815\uB9AC \uC2DC: R2 \uC11C\uBC84\uC5D0\uC11C \uC601\uAD6C \uC0AD\uC81C (\uBCF5\uAD6C \uBD88\uAC00) + \uAC24\uB7EC\uB9AC \uAE30\uB85D \uC81C\uAC70");
+      this.detailRow(parent, "lightbulb", "\uACC4\uC18D \uC4F0\uB824\uBA74: \uAC24\uB7EC\uB9AC\uC5D0\uC11C \uC774 \uC774\uBBF8\uC9C0\uB97C \uB178\uD2B8\uC5D0 \uC0BD\uC785\uD558\uC138\uC694 \u2014 \uC0BD\uC785 \uD6C4\uC5D0\uB294 \uBBF8\uC0AC\uC6A9 \uD6C4\uBCF4\uC5D0\uC11C \uBE60\uC9D1\uB2C8\uB2E4");
     }
-    new import_obsidian7.Notice(msg, 8e3);
+  }
+  onClose() {
+    this.contentEl.empty();
+  }
+};
+var TrashConfirmModal = class extends import_obsidian9.Modal {
+  constructor(app, plugin, items) {
+    super(app);
+    this.plugin = plugin;
+    this.items = items;
+  }
+  onOpen() {
+    this.modalEl.addClass("a4p-image-trash-host");
+    const { contentEl } = this;
+    contentEl.empty();
+    contentEl.createEl("h3", { text: "\uCD5C\uC885 \uD655\uC778" });
+    const plan = buildDeletePlan(this.items, this.plugin.r2.isConfigured());
+    const localOnly = plan.items.filter((p) => p.trashLocal && !p.deleteR2);
+    const withServer = plan.items.filter((p) => p.deleteR2);
+    const renderGroup = (title, cls, group) => {
+      if (group.length === 0)
+        return;
+      contentEl.createEl("p", { cls, text: title });
+      const listEl = contentEl.createDiv({ cls: "a4p-image-plan-list" });
+      for (const p of group) {
+        const row = listEl.createDiv({ cls: "a4p-image-trash-confirm-row" });
+        renderThumb(this.app, row, thumbSourceOf(p.item), { small: true });
+        row.createSpan({ cls: "a4p-image-trash-confirm-name", text: nameOf(p.item.path) });
+        row.createSpan({ cls: "a4p-image-trash-meta", text: formatBytes(p.item.size) });
+      }
+    };
+    renderGroup(`\uBCFC\uD2B8 .trash/ \uC774\uB3D9 ${localOnly.length}\uAC1C (\uBCF5\uAD6C \uAC00\uB2A5)`, "", localOnly);
+    renderGroup(
+      `\u26A0\uFE0F \uC11C\uBC84(R2)\uC5D0 \uC62C\uB77C\uAC00 \uC788\uB294 \uC774\uBBF8\uC9C0 \uC601\uAD6C \uC0AD\uC81C ${withServer.length}\uAC1C (\uBCF5\uAD6C \uBD88\uAC00)` + (withServer.some((p) => p.trashLocal) ? " \u2014 \uB85C\uCEEC \uBC31\uC5C5\uC740 .trash/\uB85C \uC774\uB3D9" : ""),
+      "a4p-image-trash-warning",
+      withServer
+    );
+    if (plan.items.some((p) => p.localOnlyFallback)) {
+      contentEl.createEl("p", {
+        text: "\uC77C\uBD80 \uD56D\uBAA9\uC740 R2 \uC124\uC815\uC774 \uC5C6\uC5B4 \uB85C\uCEEC \uC774\uB3D9\uB9CC \uC218\uD589\uB429\uB2C8\uB2E4 (\uC11C\uBC84 \uAC1D\uCCB4\xB7\uAC24\uB7EC\uB9AC \uAE30\uB85D \uC720\uC9C0)."
+      });
+    }
+    if (plan.blocked.length > 0) {
+      contentEl.createEl("p", {
+        cls: "a4p-image-trash-warning",
+        text: `\uC81C\uC678 ${plan.blocked.length}\uAC1C: ${plan.blocked[0].reason}`
+      });
+    }
+    const buttons = contentEl.createDiv({ cls: "a4p-image-modal-buttons" });
+    const cancelBtn = buttons.createEl("button", { text: "\uCDE8\uC18C" });
+    cancelBtn.addEventListener("click", () => this.close());
+    const confirmBtn = buttons.createEl("button", {
+      text: `${plan.items.length}\uAC1C \uC815\uB9AC \uC2E4\uD589`,
+      cls: "mod-warning"
+    });
+    confirmBtn.disabled = plan.items.length === 0;
+    confirmBtn.addEventListener("click", () => {
+      confirmBtn.disabled = true;
+      void executeDeletePlan(this.plugin, plan).then(() => this.close());
+    });
   }
   onClose() {
     this.contentEl.empty();
@@ -1494,12 +1957,12 @@ var TrashConfirmModal = class extends import_obsidian7.Modal {
 // src/commands.ts
 async function runRetryCommand(plugin) {
   if (!plugin.r2.isConfigured()) {
-    new import_obsidian8.Notice("R2 \uC124\uC815\uC774 \uC644\uB8CC\uB418\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4. \uC124\uC815\uC5D0\uC11C R2 \uC815\uBCF4\uB97C \uBA3C\uC800 \uC785\uB825\uD558\uC138\uC694.");
+    new import_obsidian10.Notice("R2 \uC124\uC815\uC774 \uC644\uB8CC\uB418\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4. \uC124\uC815\uC5D0\uC11C R2 \uC815\uBCF4\uB97C \uBA3C\uC800 \uC785\uB825\uD558\uC138\uC694.");
     return;
   }
   const result = await plugin.uploader.retryPending();
   if (result.retried === 0) {
-    new import_obsidian8.Notice("\uC7AC\uC2DC\uB3C4\uD560 \uC2E4\uD328\xB7\uB300\uAE30 \uC5C5\uB85C\uB4DC\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.");
+    new import_obsidian10.Notice("\uC7AC\uC2DC\uB3C4\uD560 \uC2E4\uD328\xB7\uB300\uAE30 \uC5C5\uB85C\uB4DC\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.");
     return;
   }
   let msg = `\uC7AC\uC2DC\uB3C4 \uC644\uB8CC \u2014 \uC131\uACF5 ${result.succeeded}/${result.retried}`;
@@ -1507,19 +1970,26 @@ async function runRetryCommand(plugin) {
     msg += `, \uC2E4\uD328 ${result.failed.length}\uAC74 (\uCF58\uC194 \uCC38\uACE0)`;
     console.error("[a4p-image] \uC7AC\uC2DC\uB3C4 \uC2E4\uD328:\n" + result.failed.join("\n"));
   }
-  new import_obsidian8.Notice(msg, 8e3);
+  new import_obsidian10.Notice(msg, 8e3);
+}
+function isReportNote(app, path) {
+  const file = app.vault.getAbstractFileByPath(path);
+  if (!(file instanceof import_obsidian10.TFile))
+    return false;
+  const cache = app.metadataCache.getFileCache(file);
+  return !!cache && hasReportTag((0, import_obsidian10.getAllTags)(cache));
 }
 async function findImageUsages(app, entry) {
   const usages = /* @__PURE__ */ new Set();
   if (entry.localPath) {
     for (const [mdPath, links] of Object.entries(app.metadataCache.resolvedLinks)) {
-      if (links[entry.localPath])
+      if (links[entry.localPath] && !isReportNote(app, mdPath))
         usages.add(mdPath);
     }
   }
   if (entry.url) {
     for (const md of app.vault.getMarkdownFiles()) {
-      if (usages.has(md.path))
+      if (usages.has(md.path) || isReportNote(app, md.path))
         continue;
       const content = await app.vault.cachedRead(md);
       if (content.includes(entry.url))
@@ -1528,21 +1998,47 @@ async function findImageUsages(app, entry) {
   }
   return [...usages];
 }
+async function collectCanvasTargets(app) {
+  var _a;
+  const targets = /* @__PURE__ */ new Set();
+  const canvases = app.vault.getFiles().filter((f) => f.extension === "canvas");
+  for (const canvas of canvases) {
+    try {
+      const data = JSON.parse(await app.vault.cachedRead(canvas));
+      for (const node of (_a = data.nodes) != null ? _a : []) {
+        if (node.file)
+          targets.add(node.file);
+      }
+    } catch (e) {
+    }
+  }
+  return targets;
+}
 async function collectUnusedInput(plugin) {
   const { app } = plugin;
   const entries = plugin.manifestStore.all();
   const images = app.vault.getFiles().filter((f) => isImageExt(f.extension, plugin.settings.imageExtensions)).map((f) => ({ path: f.path, size: f.stat.size }));
+  const attachmentExts = plugin.settings.includeAttachments ? plugin.settings.attachmentExtensions.map((e) => e.toLowerCase()) : [];
+  const attachments = app.vault.getFiles().filter(
+    (f) => attachmentExts.includes(f.extension.toLowerCase()) && !isImageExt(f.extension, plugin.settings.imageExtensions)
+  ).map((f) => ({ path: f.path, size: f.stat.size }));
   const resolvedTargets = /* @__PURE__ */ new Set();
-  for (const links of Object.values(app.metadataCache.resolvedLinks)) {
+  for (const [mdPath, links] of Object.entries(app.metadataCache.resolvedLinks)) {
+    if (isReportNote(app, mdPath))
+      continue;
     for (const target of Object.keys(links))
       resolvedTargets.add(target);
   }
+  for (const target of await collectCanvasTargets(app))
+    resolvedTargets.add(target);
   const urlsInVault = /* @__PURE__ */ new Set();
   const urls = entries.map((e) => e.url).filter(Boolean);
   if (urls.length > 0) {
     const base = plugin.settings.r2.publicBaseUrl.replace(/\/+$/g, "");
     const mdFiles = app.vault.getMarkdownFiles();
     for (const md of mdFiles) {
+      if (isReportNote(app, md.path))
+        continue;
       const content = await app.vault.cachedRead(md);
       if (base && !content.includes(base))
         continue;
@@ -1552,58 +2048,230 @@ async function collectUnusedInput(plugin) {
       }
     }
   }
-  return { images, resolvedTargets, entries, urlsInVault };
+  return { images, attachments, resolvedTargets, entries, urlsInVault };
 }
 async function runUnusedReportCommand(plugin) {
-  const notice = new import_obsidian8.Notice("\uBBF8\uC0AC\uC6A9 \uC774\uBBF8\uC9C0\uB97C \uBD84\uC11D\uD558\uB294 \uC911\u2026", 0);
+  const notice = new import_obsidian10.Notice("\uBBF8\uC0AC\uC6A9 \uC774\uBBF8\uC9C0\uB97C \uBD84\uC11D\uD558\uB294 \uC911\u2026", 0);
   try {
     const input = await collectUnusedInput(plugin);
     const report = classifyUnused(input);
     const markdown = buildReportMarkdown(report, /* @__PURE__ */ new Date());
     const folder = plugin.settings.reportFolder.trim();
-    if (folder && !plugin.app.vault.getAbstractFileByPath((0, import_obsidian8.normalizePath)(folder))) {
-      await plugin.app.vault.createFolder((0, import_obsidian8.normalizePath)(folder));
+    if (folder && !plugin.app.vault.getAbstractFileByPath((0, import_obsidian10.normalizePath)(folder))) {
+      await plugin.app.vault.createFolder((0, import_obsidian10.normalizePath)(folder));
     }
     const stamp = /* @__PURE__ */ new Date();
-    const name = `\uBBF8\uC0AC\uC6A9 \uC774\uBBF8\uC9C0 \uB9AC\uD3EC\uD2B8 ${stamp.toISOString().slice(0, 10)} ${String(stamp.getHours()).padStart(2, "0")}${String(stamp.getMinutes()).padStart(2, "0")}`;
-    const path = (0, import_obsidian8.normalizePath)(folder ? `${folder}/${name}.md` : `${name}.md`);
+    const name = `\uBBF8\uC0AC\uC6A9 \uC774\uBBF8\uC9C0\xB7\uCCA8\uBD80 \uB9AC\uD3EC\uD2B8 ${stamp.toISOString().slice(0, 10)} ${String(stamp.getHours()).padStart(2, "0")}${String(stamp.getMinutes()).padStart(2, "0")}`;
+    const path = (0, import_obsidian10.normalizePath)(folder ? `${folder}/${name}.md` : `${name}.md`);
     const file = await plugin.app.vault.create(path, markdown);
     notice.hide();
-    const total = report.fullyUnused.length + report.orphanedBackups.length + report.cloudOrphans.length;
-    new import_obsidian8.Notice(`\uB9AC\uD3EC\uD2B8 \uC0DD\uC131 \uC644\uB8CC \u2014 \uBBF8\uC0AC\uC6A9 \uD6C4\uBCF4 ${total}\uAC1C (${path})`, 8e3);
+    const total = report.fullyUnused.length + report.orphanedBackups.length + report.cloudOrphans.length + report.unusedAttachments.length;
+    new import_obsidian10.Notice(`\uB9AC\uD3EC\uD2B8 \uC0DD\uC131 \uC644\uB8CC \u2014 \uBBF8\uC0AC\uC6A9 \uD6C4\uBCF4 ${total}\uAC1C (${path})`, 8e3);
     await plugin.app.workspace.getLeaf(false).openFile(file);
   } catch (e) {
     notice.hide();
-    new import_obsidian8.Notice(`\uB9AC\uD3EC\uD2B8 \uC0DD\uC131 \uC2E4\uD328: ${e instanceof Error ? e.message : String(e)}`, 8e3);
+    new import_obsidian10.Notice(`\uB9AC\uD3EC\uD2B8 \uC0DD\uC131 \uC2E4\uD328: ${e instanceof Error ? e.message : String(e)}`, 8e3);
   }
 }
 async function runTrashUnusedCommand(plugin) {
-  const notice = new import_obsidian8.Notice("\uBBF8\uC0AC\uC6A9 \uC774\uBBF8\uC9C0\uB97C \uBD84\uC11D\uD558\uB294 \uC911\u2026", 0);
+  const notice = new import_obsidian10.Notice("\uBBF8\uC0AC\uC6A9 \uC774\uBBF8\uC9C0\uB97C \uBD84\uC11D\uD558\uB294 \uC911\u2026", 0);
   let candidates;
+  let skippedCloudOrphans = 0;
   try {
     const input = await collectUnusedInput(plugin);
     const report = classifyUnused(input);
+    const r2Ok = plugin.r2.isConfigured();
     candidates = [
       ...report.fullyUnused.map((img) => ({
+        entry: null,
         path: img.path,
         size: img.size,
-        reason: "\uC644\uC804 \uBBF8\uC0AC\uC6A9"
+        reason: "\uC644\uC804 \uBBF8\uC0AC\uC6A9 \u2014 \uB85C\uCEEC\uB9CC \uD734\uC9C0\uD1B5 \uC774\uB3D9",
+        kind: "fully-unused"
       })),
       ...report.orphanedBackups.filter((e) => e.localPath).map((e) => ({
+        entry: e,
         path: e.localPath,
         size: e.size,
-        reason: "URL\uC774 \uB178\uD2B8\uC5D0\uC11C \uC0AC\uB77C\uC9C4 \uBC31\uC5C5 (\uD074\uB77C\uC6B0\uB4DC\uC5D0\uB294 \uC720\uC9C0\uB428)"
+        reason: r2Ok && e.status === "uploaded" ? "URL\uC774 \uB178\uD2B8\uC5D0\uC11C \uC0AC\uB77C\uC9C4 \uBC31\uC5C5 \u2014 \uB85C\uCEEC \uC774\uB3D9 + \uC11C\uBC84 \uC601\uAD6C \uC0AD\uC81C" : "URL\uC774 \uB178\uD2B8\uC5D0\uC11C \uC0AC\uB77C\uC9C4 \uBC31\uC5C5 \u2014 \uB85C\uCEEC\uB9CC \uC774\uB3D9",
+        kind: "orphaned-backup"
+      })),
+      // R2에만 남은 고아 객체 — R2 설정이 있어야 삭제 가능
+      ...r2Ok ? report.cloudOrphans.map((e) => ({
+        entry: e,
+        path: e.r2Key,
+        size: e.size,
+        reason: "\uC11C\uBC84\uC5D0\uB9CC \uB0A8\uC740 \uACE0\uC544 \uAC1D\uCCB4 \u2014 R2\uC5D0\uC11C \uC601\uAD6C \uC0AD\uC81C",
+        kind: "cloud-orphan"
+      })) : [],
+      // 이미지 외 첨부 — 항상 로컬 .trash/ 이동만 (서버·매니페스트와 무관)
+      ...report.unusedAttachments.map((a) => ({
+        entry: null,
+        path: a.path,
+        size: a.size,
+        reason: "\uB178\uD2B8\uC5D0 \uC5F0\uACB0\uB418\uC9C0 \uC54A\uC740 \uCCA8\uBD80 \u2014 \uB85C\uCEEC\uB9CC \uD734\uC9C0\uD1B5 \uC774\uB3D9",
+        kind: "unused-attachment"
       }))
     ];
+    if (!r2Ok)
+      skippedCloudOrphans = report.cloudOrphans.length;
   } finally {
     notice.hide();
   }
+  if (skippedCloudOrphans > 0) {
+    new import_obsidian10.Notice(`R2 \uC124\uC815\uC774 \uC5C6\uC5B4 \uC11C\uBC84 \uACE0\uC544 \uAC1D\uCCB4 ${skippedCloudOrphans}\uAC1C\uB294 \uBAA9\uB85D\uC5D0\uC11C \uC81C\uC678\uD588\uC2B5\uB2C8\uB2E4.`, 8e3);
+  }
   if (candidates.length === 0) {
-    new import_obsidian8.Notice("\uBBF8\uC0AC\uC6A9 \uC774\uBBF8\uC9C0\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.");
+    new import_obsidian10.Notice("\uBBF8\uC0AC\uC6A9 \uC774\uBBF8\uC9C0\xB7\uCCA8\uBD80 \uD30C\uC77C\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.");
     return;
   }
   new TrashSelectModal(plugin.app, plugin, candidates).open();
 }
+
+// src/delete-modal.ts
+var import_obsidian11 = require("obsidian");
+var DeleteImageModal = class extends import_obsidian11.Modal {
+  constructor(app, plugin, entry, onDeleted) {
+    super(app);
+    this.plugin = plugin;
+    this.entry = entry;
+    this.onDeleted = onDeleted;
+  }
+  entryName() {
+    var _a;
+    const path = (_a = this.entry.localPath) != null ? _a : this.entry.r2Key;
+    const i = path.lastIndexOf("/");
+    return i >= 0 ? path.slice(i + 1) : path;
+  }
+  onOpen() {
+    var _a;
+    const { contentEl } = this;
+    contentEl.empty();
+    contentEl.createEl("h3", { text: "\uC774\uBBF8\uC9C0 \uC0AD\uC81C" });
+    const head = contentEl.createDiv({ cls: "a4p-image-trash-confirm-row" });
+    renderThumb(this.app, head, {
+      localPath: this.entry.localPath,
+      url: (_a = this.entry.url) != null ? _a : null,
+      name: this.entryName(),
+      size: this.entry.size
+    });
+    head.createSpan({ cls: "a4p-image-trash-confirm-name", text: this.entryName() });
+    head.createSpan({ cls: "a4p-image-trash-meta", text: formatBytes(this.entry.size) });
+    contentEl.createEl("p", { text: "\uC0AD\uC81C\uD558\uAE30 \uC804\uC5D0 \uC0AC\uC6A9\uCC98\uB97C \uD655\uC778\uD569\uB2C8\uB2E4." });
+    const warnSlot = contentEl.createDiv();
+    const usageBox = contentEl.createDiv({ cls: "a4p-image-plan-list" });
+    const loading = usageBox.createDiv({ cls: "a4p-image-plan-item" });
+    (0, import_obsidian11.setIcon)(loading.createSpan(), "loader-2");
+    loading.createSpan({ text: " \uC0AC\uC6A9 \uC911\uC778 \uB178\uD2B8\uB97C \uC2A4\uCE94\uD558\uB294 \uC911\u2026" });
+    const buttons = contentEl.createDiv({ cls: "a4p-image-modal-buttons" });
+    const cancelBtn = buttons.createEl("button", { text: "\uCDE8\uC18C" });
+    cancelBtn.addEventListener("click", () => this.close());
+    const nextBtn = buttons.createEl("button", { text: "\uC0AD\uC81C \uACC4\uC18D\u2026", cls: "mod-warning" });
+    nextBtn.disabled = true;
+    void findImageUsages(this.app, this.entry).then((usages) => {
+      usageBox.empty();
+      if (usages.length === 0) {
+        usageBox.createDiv({
+          cls: "a4p-image-plan-item",
+          text: "\uC774 \uC774\uBBF8\uC9C0\uB97C \uC0AC\uC6A9\uD558\uB294 \uB178\uD2B8\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4."
+        });
+      } else {
+        warnSlot.createEl("p", {
+          cls: "a4p-image-trash-warning",
+          text: `\u26A0\uFE0F \uC774 \uC774\uBBF8\uC9C0\uB97C \uC0AC\uC6A9\uD558\uB294 \uB178\uD2B8 ${usages.length}\uAC1C\uC758 \uB9C1\uD06C\uAC00 \uAE68\uC9D1\uB2C8\uB2E4!`
+        });
+        for (const path of usages) {
+          usageBox.createDiv({ cls: "a4p-image-plan-item", text: path });
+        }
+      }
+      nextBtn.disabled = false;
+      nextBtn.addEventListener("click", () => {
+        this.close();
+        new DeleteImageFinalModal(this.app, this.plugin, this.entry, usages.length, this.onDeleted).open();
+      });
+    });
+  }
+  onClose() {
+    this.contentEl.empty();
+  }
+};
+var DeleteImageFinalModal = class extends import_obsidian11.Modal {
+  constructor(app, plugin, entry, usageCount, onDeleted) {
+    super(app);
+    this.plugin = plugin;
+    this.entry = entry;
+    this.usageCount = usageCount;
+    this.onDeleted = onDeleted;
+  }
+  onOpen() {
+    var _a;
+    const { contentEl } = this;
+    contentEl.empty();
+    const item = {
+      entry: this.entry,
+      path: (_a = this.entry.localPath) != null ? _a : this.entry.r2Key,
+      size: this.entry.size,
+      reason: "\uAC24\uB7EC\uB9AC\uC5D0\uC11C \uC0AD\uC81C"
+    };
+    const plan = buildDeletePlan([item], this.plugin.r2.isConfigured());
+    if (plan.blocked.length > 0) {
+      contentEl.createEl("h3", { text: "\uC0AD\uC81C\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4" });
+      contentEl.createEl("p", { text: plan.blocked[0].reason });
+      contentEl.createEl("p", { text: "\uC124\uC815\uC5D0\uC11C R2 \uC815\uBCF4\uB97C \uC785\uB825\uD55C \uB4A4 \uB2E4\uC2DC \uC2DC\uB3C4\uD558\uC138\uC694." });
+      const buttons2 = contentEl.createDiv({ cls: "a4p-image-modal-buttons" });
+      const closeBtn = buttons2.createEl("button", { text: "\uB2EB\uAE30" });
+      closeBtn.addEventListener("click", () => this.close());
+      return;
+    }
+    contentEl.createEl("h3", { text: "\uCD5C\uC885 \uD655\uC778 \u2014 \uC815\uB9D0 \uC0AD\uC81C\uD560\uAE4C\uC694?" });
+    const planned = plan.items[0];
+    const listEl = contentEl.createDiv({ cls: "a4p-image-plan-list" });
+    if (planned.deleteR2) {
+      const row = listEl.createDiv({ cls: "a4p-image-plan-item a4p-image-danger" });
+      row.setText("\uC11C\uBC84(R2)\uC5D0 \uC62C\uB77C\uAC00 \uC788\uB294 \uC774\uBBF8\uC9C0\uAC00 \uC601\uAD6C \uC0AD\uC81C\uB429\uB2C8\uB2E4 \u2014 \uBCF5\uAD6C\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.");
+    }
+    if (planned.localOnlyFallback) {
+      listEl.createDiv({
+        cls: "a4p-image-plan-item",
+        text: "R2 \uC124\uC815\uC774 \uC5C6\uC5B4 \uC11C\uBC84 \uAC1D\uCCB4\uB294 \uB0A8\uC2B5\uB2C8\uB2E4 \u2014 \uB85C\uCEEC \uBC31\uC5C5\uB9CC \uC774\uB3D9\uD558\uACE0 \uAC24\uB7EC\uB9AC \uAE30\uB85D\uC740 \uC720\uC9C0\uB429\uB2C8\uB2E4."
+      });
+    }
+    if (planned.trashLocal) {
+      listEl.createDiv({
+        cls: "a4p-image-plan-item",
+        text: "\uB85C\uCEEC \uBC31\uC5C5\uC740 \uBCFC\uD2B8 .trash/ \uD3F4\uB354\uB85C \uC774\uB3D9\uD569\uB2C8\uB2E4 (\uBCF5\uAD6C \uAC00\uB2A5)."
+      });
+    }
+    if (planned.removeEntry) {
+      listEl.createDiv({
+        cls: "a4p-image-plan-item",
+        text: "\uAC24\uB7EC\uB9AC(\uB9E4\uB2C8\uD398\uC2A4\uD2B8) \uAE30\uB85D\uC774 \uC81C\uAC70\uB429\uB2C8\uB2E4."
+      });
+    }
+    if (this.usageCount > 0) {
+      contentEl.createEl("p", {
+        cls: "a4p-image-trash-warning",
+        text: `\u26A0\uFE0F \uB178\uD2B8 ${this.usageCount}\uAC1C\uC5D0\uC11C \uC774 \uC774\uBBF8\uC9C0 \uB9C1\uD06C\uAC00 \uAE68\uC9D1\uB2C8\uB2E4.`
+      });
+    }
+    const buttons = contentEl.createDiv({ cls: "a4p-image-modal-buttons" });
+    const cancelBtn = buttons.createEl("button", { text: "\uCDE8\uC18C" });
+    cancelBtn.addEventListener("click", () => this.close());
+    const confirmBtn = buttons.createEl("button", { text: "\uC0AD\uC81C \uC2E4\uD589", cls: "mod-warning" });
+    confirmBtn.addEventListener("click", () => {
+      confirmBtn.disabled = true;
+      void executeDeletePlan(this.plugin, plan).then((result) => {
+        var _a2;
+        this.close();
+        if (result.failures.length === 0)
+          (_a2 = this.onDeleted) == null ? void 0 : _a2.call(this);
+      });
+    });
+  }
+  onClose() {
+    this.contentEl.empty();
+  }
+};
 
 // src/preview-modal.ts
 var STATUS_LABEL = {
@@ -1611,7 +2279,7 @@ var STATUS_LABEL = {
   pending: "\uB300\uAE30 \uC911",
   failed: "\uC2E4\uD328"
 };
-var ImagePreviewModal = class extends import_obsidian9.Modal {
+var ImagePreviewModal = class extends import_obsidian12.Modal {
   constructor(app, plugin, entry) {
     super(app);
     this.plugin = plugin;
@@ -1624,7 +2292,6 @@ var ImagePreviewModal = class extends import_obsidian9.Modal {
     return i >= 0 ? path.slice(i + 1) : path;
   }
   onOpen() {
-    var _a;
     this.modalEl.addClass("a4p-img-preview-host");
     const { contentEl } = this;
     contentEl.empty();
@@ -1634,27 +2301,36 @@ var ImagePreviewModal = class extends import_obsidian9.Modal {
     const imgWrap = contentEl.createDiv({ cls: "a4p-img-preview-imgwrap" });
     const img = imgWrap.createEl("img");
     const local = entry.localPath ? this.app.vault.getAbstractFileByPath(entry.localPath) : null;
-    img.src = local instanceof import_obsidian9.TFile ? this.app.vault.getResourcePath(local) : entry.url;
+    img.src = local instanceof import_obsidian12.TFile ? this.app.vault.getResourcePath(local) : entry.url;
     img.alt = name;
     const body = contentEl.createDiv({ cls: "a4p-img-preview-body" });
     body.createDiv({ cls: "a4p-img-preview-name", text: name });
     const subEl = body.createDiv({ cls: "a4p-img-preview-sub" });
-    const dateStr = new Date(entry.createdAt).toLocaleString("ko-KR", {
+    const dateStr2 = new Date(entry.createdAt).toLocaleString("ko-KR", {
       dateStyle: "medium",
       timeStyle: "short"
     });
-    subEl.setText(`${formatBytes(entry.size)} \xB7 ${(_a = STATUS_LABEL[entry.status]) != null ? _a : entry.status} \xB7 ${dateStr}`);
+    const renderSub = (dims) => {
+      var _a;
+      subEl.empty();
+      const parts = [formatBytes(entry.size)];
+      if (dims)
+        parts.push(dims);
+      parts.push(dateStr2);
+      subEl.createSpan({ text: parts.join(" \xB7 ") });
+      subEl.createSpan({
+        cls: `a4p-img-status-pill ${entry.status}`,
+        text: (_a = STATUS_LABEL[entry.status]) != null ? _a : entry.status
+      });
+    };
+    renderSub();
     img.addEventListener("load", () => {
-      var _a2;
-      if (img.naturalWidth) {
-        subEl.setText(
-          `${formatBytes(entry.size)} \xB7 ${img.naturalWidth}\xD7${img.naturalHeight} \xB7 ${(_a2 = STATUS_LABEL[entry.status]) != null ? _a2 : entry.status} \xB7 ${dateStr}`
-        );
-      }
+      if (img.naturalWidth)
+        renderSub(`${img.naturalWidth}\xD7${img.naturalHeight}`);
     });
     if (entry.sourceNote) {
       const noteRow = body.createDiv({ cls: "a4p-img-preview-row" });
-      (0, import_obsidian9.setIcon)(noteRow.createSpan({ cls: "a4p-img-preview-row-icon" }), "file-text");
+      (0, import_obsidian12.setIcon)(noteRow.createSpan({ cls: "a4p-img-preview-row-icon" }), "file-text");
       const noteLink = noteRow.createEl("a", { text: entry.sourceNote, cls: "a4p-img-preview-link" });
       noteLink.addEventListener("click", (evt) => {
         evt.preventDefault();
@@ -1664,13 +2340,13 @@ var ImagePreviewModal = class extends import_obsidian9.Modal {
     }
     if (entry.status === "uploaded") {
       const urlRow = body.createDiv({ cls: "a4p-img-preview-row" });
-      (0, import_obsidian9.setIcon)(urlRow.createSpan({ cls: "a4p-img-preview-row-icon" }), "link");
+      (0, import_obsidian12.setIcon)(urlRow.createSpan({ cls: "a4p-img-preview-row-icon" }), "link");
       urlRow.createSpan({ cls: "a4p-img-preview-url", text: entry.url });
     }
     const actions = body.createDiv({ cls: "a4p-img-preview-actions" });
     this.actionButton(actions, "plus", "\uC5D0\uB514\uD130\uC5D0 \uC0BD\uC785", { cta: true }, () => {
       if (entry.status !== "uploaded") {
-        new import_obsidian9.Notice("\uC544\uC9C1 \uC5C5\uB85C\uB4DC\uB418\uC9C0 \uC54A\uC740 \uC774\uBBF8\uC9C0\uC785\uB2C8\uB2E4. '\uC2E4\uD328\uD55C \uC5C5\uB85C\uB4DC \uC7AC\uC2DC\uB3C4'\uB97C \uBA3C\uC800 \uC2E4\uD589\uD558\uC138\uC694.");
+        new import_obsidian12.Notice("\uC544\uC9C1 \uC5C5\uB85C\uB4DC\uB418\uC9C0 \uC54A\uC740 \uC774\uBBF8\uC9C0\uC785\uB2C8\uB2E4. '\uC2E4\uD328\uD55C \uC5C5\uB85C\uB4DC \uC7AC\uC2DC\uB3C4'\uB97C \uBA3C\uC800 \uC2E4\uD589\uD558\uC138\uC694.");
         return;
       }
       if (insertAtEditor(this.app, `![${stemOf(name)}](${entry.url})`))
@@ -1678,7 +2354,7 @@ var ImagePreviewModal = class extends import_obsidian9.Modal {
     });
     this.actionButton(actions, "copy", "URL \uBCF5\uC0AC", {}, () => {
       void navigator.clipboard.writeText(entry.url);
-      new import_obsidian9.Notice("URL\uC744 \uBCF5\uC0AC\uD588\uC2B5\uB2C8\uB2E4.");
+      new import_obsidian12.Notice("URL\uC744 \uBCF5\uC0AC\uD588\uC2B5\uB2C8\uB2E4.");
     });
     if (entry.sourceNote) {
       this.actionButton(actions, "file-text", "\uB178\uD2B8 \uC5F4\uAE30", {}, () => {
@@ -1686,20 +2362,24 @@ var ImagePreviewModal = class extends import_obsidian9.Modal {
         void this.app.workspace.openLinkText(entry.sourceNote, "", false);
       });
     }
-    if (entry.status === "uploaded" && import_obsidian9.Platform.isDesktopApp) {
+    if (entry.status === "uploaded" && import_obsidian12.Platform.isDesktopApp) {
       this.actionButton(actions, "external-link", "\uBE0C\uB77C\uC6B0\uC800\uC5D0\uC11C \uC5F4\uAE30", {}, () => {
         window.open(entry.url);
       });
     }
+    this.actionButton(actions, "trash-2", "\uC0AD\uC81C\u2026", { danger: true }, () => {
+      this.close();
+      new DeleteImageModal(this.app, this.plugin, entry).open();
+    });
     this.actionButton(actions, "search", "\uC0AC\uC6A9\uCC98 \uAC80\uC0C9", {}, async (btn) => {
       btn.disabled = true;
-      (0, import_obsidian9.setIcon)(btn.querySelector(".a4p-img-btn-icon"), "loader-2");
+      (0, import_obsidian12.setIcon)(btn.querySelector(".a4p-img-btn-icon"), "loader-2");
       try {
         const usages = await findImageUsages(this.app, this.entry);
         this.renderUsages(body, usages);
       } finally {
         btn.disabled = false;
-        (0, import_obsidian9.setIcon)(btn.querySelector(".a4p-img-btn-icon"), "search");
+        (0, import_obsidian12.setIcon)(btn.querySelector(".a4p-img-btn-icon"), "search");
       }
     });
   }
@@ -1707,12 +2387,14 @@ var ImagePreviewModal = class extends import_obsidian9.Modal {
     const btn = parent.createEl("button", { cls: "a4p-img-btn" });
     if (opts.cta)
       btn.addClass("mod-cta");
+    if (opts.danger)
+      btn.addClass("a4p-img-btn--danger");
     if (opts.iconOnly) {
       btn.addClass("a4p-img-btn--icon");
       btn.title = label;
       btn.setAttribute("aria-label", label);
     }
-    (0, import_obsidian9.setIcon)(btn.createSpan({ cls: "a4p-img-btn-icon" }), icon);
+    (0, import_obsidian12.setIcon)(btn.createSpan({ cls: "a4p-img-btn-icon" }), icon);
     if (!opts.iconOnly)
       btn.createSpan({ text: label });
     btn.addEventListener("click", () => void onClick(btn));
@@ -1728,7 +2410,7 @@ var ImagePreviewModal = class extends import_obsidian9.Modal {
     box.createDiv({ cls: "a4p-img-preview-usages-title", text: `\uC0AC\uC6A9 \uC911\uC778 \uB178\uD2B8 ${usages.length}\uAC1C` });
     for (const path of usages) {
       const row = box.createDiv({ cls: "a4p-img-preview-row" });
-      (0, import_obsidian9.setIcon)(row.createSpan({ cls: "a4p-img-preview-row-icon" }), "file-text");
+      (0, import_obsidian12.setIcon)(row.createSpan({ cls: "a4p-img-preview-row-icon" }), "file-text");
       const link = row.createEl("a", { text: path, cls: "a4p-img-preview-link" });
       link.addEventListener("click", (evt) => {
         evt.preventDefault();
@@ -1745,15 +2427,47 @@ var ImagePreviewModal = class extends import_obsidian9.Modal {
 // src/gallery-view.ts
 var VIEW_TYPE_A4P_IMAGE_GALLERY = "a4p-image-gallery-view";
 var DEBOUNCE_MS = 150;
-var GalleryView = class extends import_obsidian10.ItemView {
+var THUMB_PX_MIN = 80;
+var THUMB_PX_MAX = 200;
+var THUMB_PX_DEFAULT = 118;
+var LS_PREFIX = "a4p-image:gallery:";
+function loadPref(key, fallback, allowed) {
+  try {
+    const v = window.localStorage.getItem(LS_PREFIX + key);
+    return allowed.includes(v) ? v : fallback;
+  } catch (e) {
+    return fallback;
+  }
+}
+function loadNumPref(key, fallback, min, max) {
+  var _a;
+  try {
+    const n = parseInt((_a = window.localStorage.getItem(LS_PREFIX + key)) != null ? _a : "", 10);
+    return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : fallback;
+  } catch (e) {
+    return fallback;
+  }
+}
+function savePref(key, value) {
+  try {
+    window.localStorage.setItem(LS_PREFIX + key, value);
+  } catch (e) {
+  }
+}
+var GalleryView = class extends import_obsidian13.ItemView {
   constructor(leaf, plugin) {
     super(leaf);
+    this.panelEl = null;
     this.gridEl = null;
     this.statsEl = null;
+    this.countEl = null;
     this.query = "";
     this.statusFilter = "all";
     this.dateFilter = "all";
     this.groupByNote = false;
+    this.viewMode = loadPref("mode", "grid", ["grid", "masonry", "list"]);
+    this.thumbPx = loadNumPref("px", THUMB_PX_DEFAULT, THUMB_PX_MIN, THUMB_PX_MAX);
+    this.sortOrder = loadPref("sort", "new", ["new", "old", "size", "name"]);
     this.debounceTimer = null;
     /** entryId → 이 이미지를 실제 사용 중인 노트 경로들 (노트별 보기용, 새로고침 시 재스캔) */
     this.usageMap = null;
@@ -1773,16 +2487,30 @@ var GalleryView = class extends import_obsidian10.ItemView {
     const root = this.containerEl.children[1];
     root.empty();
     root.addClass("a4p-img-panel");
-    const searchRow = root.createDiv({ cls: "a4p-img-search-row" });
+    this.panelEl = root;
+    this.applyThumbPx();
+    const header = root.createDiv({ cls: "a4p-img-header" });
+    (0, import_obsidian13.setIcon)(header.createSpan({ cls: "a4p-img-header-icon" }), "images");
+    header.createSpan({ cls: "a4p-img-header-title", text: "\uC774\uBBF8\uC9C0 \uAC24\uB7EC\uB9AC" });
+    this.countEl = header.createSpan({ cls: "a4p-img-header-count" });
+    const refreshBtn = header.createEl("button", { cls: "a4p-img-icon-btn a4p-img-header-refresh" });
+    refreshBtn.title = "\uC0C8\uB85C\uACE0\uCE68 (\uB178\uD2B8\uBCC4 \uC0AC\uC6A9\uCC98 \uC7AC\uC2A4\uCE94 \uD3EC\uD568)";
+    (0, import_obsidian13.setIcon)(refreshBtn, "refresh-cw");
+    refreshBtn.addEventListener("click", () => {
+      this.usageMap = null;
+      this.renderGrid();
+    });
+    const toolbar = root.createDiv({ cls: "a4p-img-toolbar" });
+    const searchRow = toolbar.createDiv({ cls: "a4p-img-search-row" });
     const inputWrap = searchRow.createDiv({ cls: "a4p-img-input-wrap" });
-    (0, import_obsidian10.setIcon)(inputWrap.createSpan({ cls: "a4p-img-input-icon" }), "search");
+    (0, import_obsidian13.setIcon)(inputWrap.createSpan({ cls: "a4p-img-input-icon" }), "search");
     const input = inputWrap.createEl("input", {
       type: "text",
       placeholder: "\uD30C\uC77C\uBA85\xB7\uB178\uD2B8 \uAC80\uC0C9\u2026",
       cls: "a4p-img-search-input"
     });
     const clearBtn = inputWrap.createSpan({ cls: "a4p-img-input-clear" });
-    (0, import_obsidian10.setIcon)(clearBtn, "x");
+    (0, import_obsidian13.setIcon)(clearBtn, "x");
     const applyQuery = (value) => {
       this.query = value.trim().toLowerCase();
       inputWrap.toggleClass("has-value", value.length > 0);
@@ -1800,21 +2528,15 @@ var GalleryView = class extends import_obsidian10.ItemView {
       input.focus();
     });
     new GallerySuggest(this.app, this.plugin, input, (picked) => applyQuery(picked));
-    const refreshBtn = searchRow.createEl("button", { cls: "a4p-img-icon-btn" });
-    refreshBtn.title = "\uC0C8\uB85C\uACE0\uCE68 (\uB178\uD2B8\uBCC4 \uC0AC\uC6A9\uCC98 \uC7AC\uC2A4\uCE94 \uD3EC\uD568)";
-    (0, import_obsidian10.setIcon)(refreshBtn, "refresh-cw");
-    refreshBtn.addEventListener("click", () => {
-      this.usageMap = null;
-      this.renderGrid();
-    });
-    const statusRow = root.createDiv({ cls: "a4p-img-filter-row" });
+    const statusRow = toolbar.createDiv({ cls: "a4p-img-filter-row" });
+    statusRow.createSpan({ cls: "a4p-img-filter-label", text: "\uC0C1\uD0DC" });
     this.buildSegmented(
       statusRow,
       [
-        ["all", "\uC804\uCCB4"],
-        ["uploaded", "\uC5C5\uB85C\uB4DC"],
-        ["pending", "\uB300\uAE30"],
-        ["failed", "\uC2E4\uD328"]
+        ["all", "\uC804\uCCB4", "layers"],
+        ["uploaded", "\uC5C5\uB85C\uB4DC", "cloud-upload"],
+        ["pending", "\uB300\uAE30", "clock"],
+        ["failed", "\uC2E4\uD328", "alert-triangle"]
       ],
       this.statusFilter,
       (v) => {
@@ -1822,13 +2544,14 @@ var GalleryView = class extends import_obsidian10.ItemView {
         this.renderGrid();
       }
     );
-    const dateRow = root.createDiv({ cls: "a4p-img-filter-row" });
+    const dateRow = toolbar.createDiv({ cls: "a4p-img-filter-row" });
+    dateRow.createSpan({ cls: "a4p-img-filter-label", text: "\uAE30\uAC04" });
     this.buildSegmented(
       dateRow,
       [
-        ["all", "\uC804\uCCB4 \uAE30\uAC04"],
-        ["7", "7\uC77C"],
-        ["30", "30\uC77C"]
+        ["all", "\uC804\uCCB4 \uAE30\uAC04", "infinity"],
+        ["7", "7\uC77C", "calendar-days"],
+        ["30", "30\uC77C", "calendar-range"]
       ],
       this.dateFilter,
       (v) => {
@@ -1837,12 +2560,61 @@ var GalleryView = class extends import_obsidian10.ItemView {
       }
     );
     const groupBtn = dateRow.createEl("button", { cls: "a4p-img-chip" });
-    (0, import_obsidian10.setIcon)(groupBtn.createSpan({ cls: "a4p-img-chip-icon" }), "folder-tree");
+    (0, import_obsidian13.setIcon)(groupBtn.createSpan({ cls: "a4p-img-chip-icon" }), "folder-tree");
     groupBtn.createSpan({ text: "\uB178\uD2B8\uBCC4" });
     groupBtn.title = "\uB178\uD2B8\uBCC4 \uADF8\uB8F9 \uBCF4\uAE30 \uC804\uD658";
     groupBtn.addEventListener("click", () => {
       this.groupByNote = !this.groupByNote;
       groupBtn.toggleClass("is-active", this.groupByNote);
+      this.renderGrid();
+    });
+    const viewRow = toolbar.createDiv({ cls: "a4p-img-filter-row" });
+    viewRow.createSpan({ cls: "a4p-img-filter-label", text: "\uBCF4\uAE30" });
+    this.buildIconSeg(
+      viewRow,
+      [
+        ["grid", "layout-grid", "\uACA9\uC790 \uBCF4\uAE30"],
+        ["masonry", "layout-dashboard", "\uBAA8\uC790\uC774\uD06C \uBCF4\uAE30 (\uC6D0\uBCF8 \uBE44\uC728)"],
+        ["list", "list", "\uBAA9\uB85D \uBCF4\uAE30"]
+      ],
+      this.viewMode,
+      (v) => {
+        this.viewMode = v;
+        savePref("mode", v);
+        syncZoomDisabled();
+        this.renderGrid();
+      }
+    );
+    const zoom = viewRow.createDiv({ cls: "a4p-img-zoom" });
+    zoom.title = "\uC378\uB124\uC77C \uD06C\uAE30";
+    (0, import_obsidian13.setIcon)(zoom.createSpan({ cls: "a4p-img-zoom-icon" }), "zoom-out");
+    const zoomSlider = zoom.createEl("input", { type: "range", cls: "a4p-img-zoom-slider" });
+    zoomSlider.min = String(THUMB_PX_MIN);
+    zoomSlider.max = String(THUMB_PX_MAX);
+    zoomSlider.step = "4";
+    zoomSlider.value = String(this.thumbPx);
+    (0, import_obsidian13.setIcon)(zoom.createSpan({ cls: "a4p-img-zoom-icon" }), "zoom-in");
+    zoomSlider.addEventListener("input", () => {
+      this.thumbPx = parseInt(zoomSlider.value, 10);
+      savePref("px", zoomSlider.value);
+      this.applyThumbPx();
+    });
+    const syncZoomDisabled = () => zoom.toggleClass("is-disabled", this.viewMode === "list");
+    syncZoomDisabled();
+    const sortSel = viewRow.createEl("select", { cls: "dropdown a4p-img-sort" });
+    const SORT_LABEL = {
+      new: "\uCD5C\uC2E0\uC21C",
+      old: "\uC624\uB798\uB41C\uC21C",
+      size: "\uC6A9\uB7C9 \uD070\uC21C",
+      name: "\uC774\uB984\uC21C"
+    };
+    for (const [value, label] of Object.entries(SORT_LABEL)) {
+      sortSel.createEl("option", { text: label, value });
+    }
+    sortSel.value = this.sortOrder;
+    sortSel.addEventListener("change", () => {
+      this.sortOrder = sortSel.value;
+      savePref("sort", this.sortOrder);
       this.renderGrid();
     });
     this.statsEl = root.createDiv({ cls: "a4p-img-stats" });
@@ -1854,12 +2626,20 @@ var GalleryView = class extends import_obsidian10.ItemView {
     if (this.debounceTimer !== null)
       window.clearTimeout(this.debounceTimer);
   }
-  /** iOS 스타일 세그먼트 컨트롤 */
+  /** 외부(삭제 흐름 등)에서 호출하는 전체 갱신 — 사용처 맵도 재스캔 */
+  refresh() {
+    this.usageMap = null;
+    this.renderGrid();
+  }
+  /** iOS 스타일 세그먼트 컨트롤 — [값, 라벨, lucide 아이콘], 활성 시 data-seg로 상태색 강조 */
   buildSegmented(parent, options, initial, onChange) {
     const box = parent.createDiv({ cls: "a4p-img-seg" });
     const buttons = [];
-    for (const [value, label] of options) {
-      const btn = box.createEl("button", { cls: "a4p-img-seg-btn", text: label });
+    for (const [value, label, icon] of options) {
+      const btn = box.createEl("button", { cls: "a4p-img-seg-btn" });
+      btn.dataset.seg = value;
+      (0, import_obsidian13.setIcon)(btn.createSpan({ cls: "a4p-img-seg-icon" }), icon);
+      btn.createSpan({ text: label });
       if (value === initial)
         btn.addClass("is-active");
       btn.addEventListener("click", () => {
@@ -1871,18 +2651,84 @@ var GalleryView = class extends import_obsidian10.ItemView {
       buttons.push(btn);
     }
   }
+  /** 아이콘 전용 미니 세그먼트 — 뷰 모드·썸네일 크기 토글 */
+  buildIconSeg(parent, options, initial, onChange) {
+    const box = parent.createDiv({ cls: "a4p-img-seg a4p-img-seg--icons" });
+    const buttons = [];
+    for (const [value, icon, tooltip] of options) {
+      const btn = box.createEl("button", { cls: "a4p-img-seg-btn a4p-img-seg-btn--icon" });
+      btn.title = tooltip;
+      btn.setAttribute("aria-label", tooltip);
+      (0, import_obsidian13.setIcon)(btn.createSpan({ cls: "a4p-img-seg-icon" }), icon);
+      if (value === initial)
+        btn.addClass("is-active");
+      btn.addEventListener("click", () => {
+        for (const b of buttons)
+          b.removeClass("is-active");
+        btn.addClass("is-active");
+        onChange(value);
+      });
+      buttons.push(btn);
+    }
+  }
+  applyThumbPx() {
+    var _a;
+    (_a = this.panelEl) == null ? void 0 : _a.style.setProperty("--a4p-thumb-min", `${this.thumbPx}px`);
+  }
   entryName(entry) {
     var _a;
     const path = (_a = entry.localPath) != null ? _a : entry.r2Key;
     const i = path.lastIndexOf("/");
     return i >= 0 ? path.slice(i + 1) : path;
   }
+  /** 카드·목록 공용 빠른 액션 정의 (삽입 / URL 복사 / 삭제) */
+  entryActions(entry) {
+    const name = this.entryName(entry);
+    return [
+      {
+        icon: "plus",
+        title: "\uC5D0\uB514\uD130\uC5D0 \uC0BD\uC785",
+        onClick: () => {
+          if (entry.status !== "uploaded") {
+            new import_obsidian13.Notice("\uC544\uC9C1 \uC5C5\uB85C\uB4DC\uB418\uC9C0 \uC54A\uC740 \uC774\uBBF8\uC9C0\uC785\uB2C8\uB2E4.");
+            return;
+          }
+          insertAtEditor(this.app, `![${stemOf(name)}](${entry.url})`);
+        }
+      },
+      {
+        icon: "copy",
+        title: "URL \uBCF5\uC0AC",
+        onClick: () => {
+          void navigator.clipboard.writeText(entry.url);
+          new import_obsidian13.Notice("URL\uC744 \uBCF5\uC0AC\uD588\uC2B5\uB2C8\uB2E4.");
+        }
+      },
+      {
+        icon: "trash-2",
+        title: "\uC0AD\uC81C\u2026 (\uC11C\uBC84 \uD3EC\uD568, \uC774\uC911 \uD655\uC778)",
+        danger: true,
+        onClick: () => {
+          new DeleteImageModal(this.app, this.plugin, entry).open();
+        }
+      }
+    ];
+  }
   renderGrid() {
+    var _a;
     if (!this.gridEl)
       return;
     this.gridEl.empty();
+    this.gridEl.className = this.groupByNote ? "a4p-img-grid is-grouped" : `a4p-img-grid mode-${this.viewMode}`;
+    const compare = {
+      new: (a, b) => b.createdAt - a.createdAt,
+      old: (a, b) => a.createdAt - b.createdAt,
+      size: (a, b) => b.size - a.size,
+      name: (a, b) => this.entryName(a).localeCompare(this.entryName(b), "ko")
+    };
     const allEntries = this.plugin.manifestStore.all();
-    let entries = [...allEntries].sort((a, b) => b.createdAt - a.createdAt);
+    (_a = this.countEl) == null ? void 0 : _a.setText(String(allEntries.length));
+    let entries = [...allEntries].sort(compare[this.sortOrder]);
     if (this.statusFilter !== "all")
       entries = entries.filter((e) => e.status === this.statusFilter);
     if (this.dateFilter !== "all") {
@@ -1891,8 +2737,8 @@ var GalleryView = class extends import_obsidian10.ItemView {
     }
     if (this.query) {
       entries = entries.filter((e) => {
-        var _a;
-        const haystack = `${this.entryName(e)} ${(_a = e.sourceNote) != null ? _a : ""}`.toLowerCase();
+        var _a2;
+        const haystack = `${this.entryName(e)} ${(_a2 = e.sourceNote) != null ? _a2 : ""}`.toLowerCase();
         return haystack.includes(this.query);
       });
     }
@@ -1902,11 +2748,16 @@ var GalleryView = class extends import_obsidian10.ItemView {
     if (this.statsEl) {
       this.statsEl.empty();
       this.statsEl.createSpan({ cls: "a4p-img-stats-strong", text: `${entries.length}\uAC1C \xB7 ${formatBytes(filteredSize)}` });
-      this.statsEl.createSpan({ text: ` \u2014 R2 \uC0AC\uC6A9\uB7C9 ${formatBytes(uploadedSize)} (10GB\uC758 ${pctOfFree}%)` });
+      const usage = this.statsEl.createSpan({ cls: "a4p-img-stats-usage" });
+      (0, import_obsidian13.setIcon)(usage.createSpan({ cls: "a4p-img-stats-usage-icon" }), "cloud");
+      usage.createSpan({ text: `R2 ${formatBytes(uploadedSize)} \xB7 10GB\uC758 ${pctOfFree}%` });
+      const bar = this.statsEl.createDiv({ cls: "a4p-img-stats-bar" });
+      const fill = bar.createDiv({ cls: "a4p-img-stats-bar-fill" });
+      fill.style.width = `${Math.min(100, parseFloat(pctOfFree))}%`;
     }
     if (entries.length === 0) {
       const empty = this.gridEl.createDiv({ cls: "a4p-img-empty" });
-      (0, import_obsidian10.setIcon)(empty.createDiv({ cls: "a4p-img-empty-icon" }), "image-off");
+      (0, import_obsidian13.setIcon)(empty.createDiv({ cls: "a4p-img-empty-icon" }), "image-off");
       empty.createDiv({ cls: "a4p-img-empty-title", text: "\uD45C\uC2DC\uD560 \uC774\uBBF8\uC9C0\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4" });
       empty.createDiv({ cls: "a4p-img-empty-sub", text: "\uD544\uD130\uB97C \uBC14\uAFB8\uAC70\uB098 \uB178\uD2B8\uC5D0 \uC774\uBBF8\uC9C0\uB97C \uBD99\uC5EC\uB123\uC5B4 \uBCF4\uC138\uC694." });
       return;
@@ -1915,9 +2766,15 @@ var GalleryView = class extends import_obsidian10.ItemView {
       this.renderGroupedByUsage(entries);
     } else {
       for (const entry of entries) {
-        this.renderCard(this.gridEl, entry);
+        this.renderEntry(this.gridEl, entry);
       }
     }
+  }
+  renderEntry(parent, entry) {
+    if (this.viewMode === "list")
+      this.renderListRow(parent, entry);
+    else
+      this.renderCard(parent, entry);
   }
   /**
    * 노트별 보기 — sourceNote(최초 삽입 노트)가 아니라 실제 사용처 기준.
@@ -1937,7 +2794,7 @@ var GalleryView = class extends import_obsidian10.ItemView {
         });
       }
       const loading = this.gridEl.createDiv({ cls: "a4p-img-empty is-loading" });
-      (0, import_obsidian10.setIcon)(loading.createDiv({ cls: "a4p-img-empty-icon" }), "loader-2");
+      (0, import_obsidian13.setIcon)(loading.createDiv({ cls: "a4p-img-empty-icon" }), "loader-2");
       loading.createDiv({ cls: "a4p-img-empty-title", text: "\uB178\uD2B8\uBCC4 \uC0AC\uC6A9\uCC98\uB97C \uC2A4\uCE94\uD558\uB294 \uC911\u2026" });
       return;
     }
@@ -1952,13 +2809,24 @@ var GalleryView = class extends import_obsidian10.ItemView {
       }
     }
     for (const [note, groupEntries] of groups) {
+      const isRealNote = note !== "(\uC0AC\uC6A9\uB41C \uB178\uD2B8 \uC5C6\uC74C)";
       const header = this.gridEl.createDiv({ cls: "a4p-img-group" });
-      header.createSpan({ text: noteBasename(note) });
+      (0, import_obsidian13.setIcon)(
+        header.createSpan({ cls: "a4p-img-group-icon" }),
+        isRealNote ? "file-text" : "unlink"
+      );
+      header.createSpan({ cls: "a4p-img-group-name", text: noteBasename(note) });
       header.createSpan({ cls: "a4p-img-group-count", text: `${groupEntries.length}\uC7A5` });
-      header.title = note;
-      const groupGrid = this.gridEl.createDiv({ cls: "a4p-img-grid-inner" });
+      header.title = isRealNote ? `${note} \u2014 \uD074\uB9AD\uD558\uBA74 \uB178\uD2B8\uB97C \uC5FD\uB2C8\uB2E4` : note;
+      if (isRealNote) {
+        header.addClass("is-clickable");
+        header.addEventListener("click", () => {
+          void this.app.workspace.openLinkText(note, "", false);
+        });
+      }
+      const groupGrid = this.gridEl.createDiv({ cls: `a4p-img-grid-inner mode-${this.viewMode}` });
       for (const entry of groupEntries)
-        this.renderCard(groupGrid, entry);
+        this.renderEntry(groupGrid, entry);
     }
   }
   /** 전 볼트 1회 스캔으로 entryId → 사용 노트 목록 구축 */
@@ -1977,6 +2845,8 @@ var GalleryView = class extends import_obsidian10.ItemView {
         byLocal.set(e.localPath, e);
     }
     for (const [mdPath, links] of Object.entries(this.app.metadataCache.resolvedLinks)) {
+      if (isReportNote(this.app, mdPath))
+        continue;
       for (const target of Object.keys(links)) {
         const e = byLocal.get(target);
         if (e)
@@ -1992,6 +2862,8 @@ var GalleryView = class extends import_obsidian10.ItemView {
     ];
     if (withUrl.length > 0 && origins.length > 0) {
       for (const md of this.app.vault.getMarkdownFiles()) {
+        if (isReportNote(this.app, md.path))
+          continue;
         const content = await this.app.vault.cachedRead(md);
         if (!origins.some((o) => content.includes(o)))
           continue;
@@ -2014,36 +2886,91 @@ ${entry.url}`;
     const img = thumbWrap.createEl("img", { cls: "a4p-img-thumb" });
     img.loading = "lazy";
     const local = entry.localPath ? this.app.vault.getAbstractFileByPath(entry.localPath) : null;
-    img.src = local instanceof import_obsidian10.TFile ? this.app.vault.getResourcePath(local) : entry.url;
+    img.src = local instanceof import_obsidian13.TFile ? this.app.vault.getResourcePath(local) : entry.url;
     img.alt = name;
+    if (img.complete && img.naturalWidth > 0) {
+      thumbWrap.addClass("is-loaded");
+    } else {
+      img.addEventListener("load", () => thumbWrap.addClass("is-loaded"));
+      img.addEventListener("error", () => {
+        thumbWrap.addClass("is-broken");
+        (0, import_obsidian13.setIcon)(thumbWrap.createSpan({ cls: "a4p-img-thumb-broken" }), "image-off");
+      });
+    }
     if (entry.status !== "uploaded") {
-      const dot = thumbWrap.createDiv({ cls: `a4p-img-dot ${entry.status}` });
-      dot.title = entry.status === "failed" ? "\uC5C5\uB85C\uB4DC \uC2E4\uD328" : "\uC5C5\uB85C\uB4DC \uB300\uAE30";
+      card.addClass(`is-${entry.status}`);
+      const badge = thumbWrap.createDiv({ cls: `a4p-img-badge ${entry.status}` });
+      (0, import_obsidian13.setIcon)(badge, entry.status === "failed" ? "alert-triangle" : "clock");
+      badge.title = entry.status === "failed" ? "\uC5C5\uB85C\uB4DC \uC2E4\uD328 \u2014 '\uC2E4\uD328\uD55C \uC5C5\uB85C\uB4DC \uC7AC\uC2DC\uB3C4' \uBA85\uB839\uC73C\uB85C \uBCF5\uAD6C" : "\uC5C5\uB85C\uB4DC \uB300\uAE30 \uC911";
     }
     const quick = thumbWrap.createDiv({ cls: "a4p-img-quick" });
-    const insertBtn = quick.createEl("button", { cls: "a4p-img-quick-btn" });
-    insertBtn.title = "\uC5D0\uB514\uD130\uC5D0 \uC0BD\uC785";
-    (0, import_obsidian10.setIcon)(insertBtn, "plus");
-    insertBtn.addEventListener("click", (evt) => {
-      evt.stopPropagation();
-      if (entry.status !== "uploaded") {
-        new import_obsidian10.Notice("\uC544\uC9C1 \uC5C5\uB85C\uB4DC\uB418\uC9C0 \uC54A\uC740 \uC774\uBBF8\uC9C0\uC785\uB2C8\uB2E4.");
-        return;
-      }
-      insertAtEditor(this.app, `![${stemOf(name)}](${entry.url})`);
-    });
-    const copyBtn = quick.createEl("button", { cls: "a4p-img-quick-btn" });
-    copyBtn.title = "URL \uBCF5\uC0AC";
-    (0, import_obsidian10.setIcon)(copyBtn, "copy");
-    copyBtn.addEventListener("click", (evt) => {
-      evt.stopPropagation();
-      void navigator.clipboard.writeText(entry.url);
-      new import_obsidian10.Notice("URL\uC744 \uBCF5\uC0AC\uD588\uC2B5\uB2C8\uB2E4.");
-    });
+    for (const action of this.entryActions(entry)) {
+      const btn = quick.createEl("button", {
+        cls: `a4p-img-quick-btn${action.danger ? " a4p-img-quick-btn--danger" : ""}`
+      });
+      btn.title = action.title;
+      (0, import_obsidian13.setIcon)(btn, action.icon);
+      btn.addEventListener("click", (evt) => {
+        evt.stopPropagation();
+        action.onClick();
+      });
+    }
     const overlay = thumbWrap.createDiv({ cls: "a4p-img-card-overlay" });
     overlay.createDiv({ cls: "a4p-img-card-name", text: name });
     overlay.createDiv({ cls: "a4p-img-card-sub", text: formatBytes(entry.size) });
     card.addEventListener("click", () => {
+      new ImagePreviewModal(this.app, this.plugin, entry).open();
+    });
+  }
+  /** 목록 보기 — 썸네일 + 파일명 + 원본 노트 + 메타 + 상태 필 + 액션 */
+  renderListRow(parent, entry) {
+    var _a;
+    const name = this.entryName(entry);
+    const row = parent.createDiv({ cls: "a4p-img-listrow" });
+    if (entry.status !== "uploaded")
+      row.addClass(`is-${entry.status}`);
+    const thumb = row.createDiv({ cls: "a4p-img-listrow-thumb" });
+    const img = thumb.createEl("img");
+    img.loading = "lazy";
+    const local = entry.localPath ? this.app.vault.getAbstractFileByPath(entry.localPath) : null;
+    img.src = local instanceof import_obsidian13.TFile ? this.app.vault.getResourcePath(local) : entry.url;
+    img.alt = name;
+    img.addEventListener("error", () => {
+      thumb.empty();
+      (0, import_obsidian13.setIcon)(thumb.createSpan({ cls: "a4p-img-thumb-broken" }), "image-off");
+    });
+    const info = row.createDiv({ cls: "a4p-img-listrow-info" });
+    info.createDiv({ cls: "a4p-img-listrow-name", text: name });
+    const sub = info.createDiv({ cls: "a4p-img-listrow-sub" });
+    const date = new Date(entry.createdAt).toLocaleDateString("ko-KR", { dateStyle: "medium" });
+    sub.createSpan({ text: `${formatBytes(entry.size)} \xB7 ${date}` });
+    if (entry.sourceNote) {
+      sub.createSpan({ text: " \xB7 " });
+      const link = sub.createEl("a", { cls: "a4p-img-listrow-note", text: noteBasename(entry.sourceNote) });
+      link.title = entry.sourceNote;
+      link.addEventListener("click", (evt) => {
+        evt.preventDefault();
+        evt.stopPropagation();
+        void this.app.workspace.openLinkText(entry.sourceNote, "", false);
+      });
+    }
+    row.createSpan({
+      cls: `a4p-img-status-pill ${entry.status}`,
+      text: (_a = STATUS_LABEL[entry.status]) != null ? _a : entry.status
+    });
+    const actions = row.createDiv({ cls: "a4p-img-listrow-actions" });
+    for (const action of this.entryActions(entry)) {
+      const btn = actions.createEl("button", {
+        cls: `a4p-img-listrow-btn${action.danger ? " a4p-img-listrow-btn--danger" : ""}`
+      });
+      btn.title = action.title;
+      (0, import_obsidian13.setIcon)(btn, action.icon);
+      btn.addEventListener("click", (evt) => {
+        evt.stopPropagation();
+        action.onClick();
+      });
+    }
+    row.addEventListener("click", () => {
       new ImagePreviewModal(this.app, this.plugin, entry).open();
     });
   }
@@ -2053,7 +2980,7 @@ function noteBasename(path) {
   const name = (_a = path.split("/").pop()) != null ? _a : path;
   return name.replace(/\.md$/i, "");
 }
-var GallerySuggest = class extends import_obsidian10.AbstractInputSuggest {
+var GallerySuggest = class extends import_obsidian13.AbstractInputSuggest {
   constructor(app, plugin, inputEl, onPick) {
     super(app, inputEl);
     this.plugin = plugin;
@@ -2088,7 +3015,7 @@ var GallerySuggest = class extends import_obsidian10.AbstractInputSuggest {
   }
   renderSuggestion(value, el) {
     el.addClass("a4p-img-suggest-item");
-    (0, import_obsidian10.setIcon)(el.createSpan({ cls: "a4p-img-suggest-icon" }), value.kind === "file" ? "image" : "file-text");
+    (0, import_obsidian13.setIcon)(el.createSpan({ cls: "a4p-img-suggest-icon" }), value.kind === "file" ? "image" : "file-text");
     el.createSpan({ cls: "a4p-img-suggest-label", text: value.label });
     el.createSpan({ cls: "a4p-img-suggest-kind", text: value.kind === "file" ? "\uC774\uBBF8\uC9C0" : "\uB178\uD2B8" });
   }
@@ -2100,7 +3027,7 @@ var GallerySuggest = class extends import_obsidian10.AbstractInputSuggest {
 };
 
 // src/migrate-modal.ts
-var import_obsidian11 = require("obsidian");
+var import_obsidian14 = require("obsidian");
 
 // src/migrate.ts
 function normalizeBase(url) {
@@ -2116,7 +3043,7 @@ function replaceUrlPrefix(content, oldBase, newBase) {
 }
 
 // src/migrate-modal.ts
-var MigrateUrlModal = class extends import_obsidian11.Modal {
+var MigrateUrlModal = class extends import_obsidian14.Modal {
   constructor(app, plugin) {
     super(app);
     this.plugin = plugin;
@@ -2141,13 +3068,13 @@ var MigrateUrlModal = class extends import_obsidian11.Modal {
       cls: "a4p-image-settings-status-line",
       text: "\uBCFC\uD2B8 \uC804\uCCB4 \uB178\uD2B8\uC5D0\uC11C '\uC61B \uC8FC\uC18C'\uB85C \uC2DC\uC791\uD558\uB294 \uB9C1\uD06C\uB97C '\uC0C8 \uC8FC\uC18C'\uB85C \uBC14\uAFC9\uB2C8\uB2E4. \uCEE4\uC2A4\uD140 \uB3C4\uBA54\uC778 \uC804\uD658\uC774\uB098 \uC798\uBABB \uC785\uB825\uB41C \uC8FC\uC18C \uBCF5\uAD6C\uC5D0 \uC0AC\uC6A9\uD558\uC138\uC694. \uBA3C\uC800 \uC2A4\uCE94\uC73C\uB85C \uB300\uC0C1\uC744 \uD655\uC778\uD574\uC57C \uC2E4\uD589\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4."
     });
-    new import_obsidian11.Setting(contentEl).setName("\uC61B \uC8FC\uC18C (base URL)").addText(
+    new import_obsidian14.Setting(contentEl).setName("\uC61B \uC8FC\uC18C (base URL)").addText(
       (text) => text.setPlaceholder("https://pub-xxxx.r2.dev").setValue(this.oldBase).onChange((v) => {
         this.oldBase = v;
         this.invalidateScan();
       })
     );
-    new import_obsidian11.Setting(contentEl).setName("\uC0C8 \uC8FC\uC18C (base URL)").addText(
+    new import_obsidian14.Setting(contentEl).setName("\uC0C8 \uC8FC\uC18C (base URL)").addText(
       (text) => text.setPlaceholder("https://img.example.com").setValue(this.newBase).onChange((v) => {
         this.newBase = v;
         this.invalidateScan();
@@ -2180,7 +3107,7 @@ var MigrateUrlModal = class extends import_obsidian11.Modal {
   async scan() {
     const error = this.validate();
     if (error) {
-      new import_obsidian11.Notice(error);
+      new import_obsidian14.Notice(error);
       return;
     }
     this.statusEl.empty();
@@ -2236,7 +3163,7 @@ var MigrateUrlModal = class extends import_obsidian11.Modal {
       }
     }
     this.close();
-    new import_obsidian11.Notice(
+    new import_obsidian14.Notice(
       `\uC8FC\uC18C \uBCC0\uACBD \uC644\uB8CC \u2014 \uB178\uD2B8 ${this.scanResult.files.length}\uAC1C\uC5D0\uC11C \uB9C1\uD06C ${replaced}\uAC74, \uB9E4\uB2C8\uD398\uC2A4\uD2B8 ${manifestFixed}\uAC74 \uAC31\uC2E0.`,
       8e3
     );
@@ -2247,7 +3174,7 @@ var MigrateUrlModal = class extends import_obsidian11.Modal {
 };
 
 // src/eagle/client.ts
-var import_obsidian12 = require("obsidian");
+var import_obsidian15 = require("obsidian");
 var EagleClient = class {
   constructor(getBaseUrl) {
     this.getBaseUrl = getBaseUrl;
@@ -2257,7 +3184,7 @@ var EagleClient = class {
   }
   async get(endpoint) {
     try {
-      const res = await (0, import_obsidian12.requestUrl)({ url: `${this.base()}${endpoint}`, method: "GET", throw: false });
+      const res = await (0, import_obsidian15.requestUrl)({ url: `${this.base()}${endpoint}`, method: "GET", throw: false });
       if (res.status !== 200)
         return null;
       const body = res.json;
@@ -2268,7 +3195,7 @@ var EagleClient = class {
   }
   async post(endpoint, payload) {
     try {
-      const res = await (0, import_obsidian12.requestUrl)({
+      const res = await (0, import_obsidian15.requestUrl)({
         url: `${this.base()}${endpoint}`,
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -2324,8 +3251,8 @@ var EagleClient = class {
 };
 
 // src/eagle/modal.ts
-var import_obsidian13 = require("obsidian");
-var EagleSearchModal = class _EagleSearchModal extends import_obsidian13.FuzzySuggestModal {
+var import_obsidian16 = require("obsidian");
+var EagleSearchModal = class _EagleSearchModal extends import_obsidian16.FuzzySuggestModal {
   constructor(app, plugin, editor, sourceNote, items, libraryPath) {
     super(app);
     this.plugin = plugin;
@@ -2338,16 +3265,16 @@ var EagleSearchModal = class _EagleSearchModal extends import_obsidian13.FuzzySu
   static async open(plugin, editor, sourceNote) {
     const client = plugin.eagle;
     if (!await client.isAvailable()) {
-      new import_obsidian13.Notice("Eagle \uC571\uC774 \uC2E4\uD589 \uC911\uC774 \uC544\uB2D9\uB2C8\uB2E4. Eagle\uC744 \uBA3C\uC800 \uC2E4\uD589\uD558\uC138\uC694.");
+      new import_obsidian16.Notice("Eagle \uC571\uC774 \uC2E4\uD589 \uC911\uC774 \uC544\uB2D9\uB2C8\uB2E4. Eagle\uC744 \uBA3C\uC800 \uC2E4\uD589\uD558\uC138\uC694.");
       return;
     }
     const [items, libraryPath] = await Promise.all([client.searchImages(), client.libraryPath()]);
     if (!libraryPath) {
-      new import_obsidian13.Notice("Eagle \uB77C\uC774\uBE0C\uB7EC\uB9AC \uACBD\uB85C\uB97C \uAC00\uC838\uC624\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4.");
+      new import_obsidian16.Notice("Eagle \uB77C\uC774\uBE0C\uB7EC\uB9AC \uACBD\uB85C\uB97C \uAC00\uC838\uC624\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4.");
       return;
     }
     if (items.length === 0) {
-      new import_obsidian13.Notice("Eagle \uB77C\uC774\uBE0C\uB7EC\uB9AC\uC5D0 \uC774\uBBF8\uC9C0\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.");
+      new import_obsidian16.Notice("Eagle \uB77C\uC774\uBE0C\uB7EC\uB9AC\uC5D0 \uC774\uBBF8\uC9C0\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.");
       return;
     }
     new _EagleSearchModal(plugin.app, plugin, editor, sourceNote, items, libraryPath).open();
@@ -2386,10 +3313,10 @@ var EagleSearchModal = class _EagleSearchModal extends import_obsidian13.FuzzySu
     const filePath = this.plugin.eagle.itemFilePath(this.libraryPath, item);
     const buf = readLocalFile(filePath);
     if (!buf) {
-      new import_obsidian13.Notice(`Eagle \uC6D0\uBCF8 \uD30C\uC77C\uC744 \uC77D\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4: ${filePath}`);
+      new import_obsidian16.Notice(`Eagle \uC6D0\uBCF8 \uD30C\uC77C\uC744 \uC77D\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4: ${filePath}`);
       return;
     }
-    const notice = new import_obsidian13.Notice(`Eagle \uC774\uBBF8\uC9C0 \uC5C5\uB85C\uB4DC \uC911: ${item.name}\u2026`, 0);
+    const notice = new import_obsidian16.Notice(`Eagle \uC774\uBBF8\uC9C0 \uC5C5\uB85C\uB4DC \uC911: ${item.name}\u2026`, 0);
     try {
       const outcome = await this.plugin.uploader.process(buf, {
         name: `${item.name}.${item.ext}`,
@@ -2405,13 +3332,13 @@ var EagleSearchModal = class _EagleSearchModal extends import_obsidian13.FuzzySu
           this.plugin.manifestStore.update(entry.id, { eagleId: item.id });
       } else if (outcome.localPath && this.plugin.settings.fallbackToLocalEmbed) {
         this.editor.replaceSelection(`![[${outcome.localPath}]]`);
-        new import_obsidian13.Notice(`\uC5C5\uB85C\uB4DC \uC2E4\uD328 \u2014 \uB85C\uCEEC\uB85C \uC784\uBCA0\uB4DC\uD588\uC2B5\uB2C8\uB2E4. (${outcome.error})`, 8e3);
+        new import_obsidian16.Notice(`\uC5C5\uB85C\uB4DC \uC2E4\uD328 \u2014 \uB85C\uCEEC\uB85C \uC784\uBCA0\uB4DC\uD588\uC2B5\uB2C8\uB2E4. (${outcome.error})`, 8e3);
       } else {
-        new import_obsidian13.Notice(`\uC5C5\uB85C\uB4DC \uC2E4\uD328: ${outcome.error}`, 8e3);
+        new import_obsidian16.Notice(`\uC5C5\uB85C\uB4DC \uC2E4\uD328: ${outcome.error}`, 8e3);
       }
     } catch (e) {
       notice.hide();
-      new import_obsidian13.Notice(`Eagle \uC774\uBBF8\uC9C0 \uCC98\uB9AC \uC2E4\uD328: ${e instanceof Error ? e.message : String(e)}`, 8e3);
+      new import_obsidian16.Notice(`Eagle \uC774\uBBF8\uC9C0 \uCC98\uB9AC \uC2E4\uD328: ${e instanceof Error ? e.message : String(e)}`, 8e3);
     }
   }
 };
@@ -2429,7 +3356,7 @@ function readLocalFile(absPath) {
 }
 
 // src/main.ts
-var A4pImagePlugin = class extends import_obsidian14.Plugin {
+var A4pImagePlugin = class extends import_obsidian17.Plugin {
   async onload() {
     await this.loadState();
     this.r2 = new R2Client(() => this.settings.r2);
@@ -2437,7 +3364,7 @@ var A4pImagePlugin = class extends import_obsidian14.Plugin {
     await this.manifestStore.load();
     this.uploader = new Uploader(this);
     this.eagle = new EagleClient(() => this.settings.eagle.apiUrl);
-    if (import_obsidian14.Platform.isDesktopApp) {
+    if (import_obsidian17.Platform.isDesktopApp) {
       this.uploader.onUploaded = async (entry) => {
         var _a;
         const { enabled, registerOnUpload, folderId } = this.settings.eagle;
@@ -2446,7 +3373,7 @@ var A4pImagePlugin = class extends import_obsidian14.Plugin {
         if (!await this.eagle.isAvailable())
           return;
         const adapter = this.app.vault.adapter;
-        if (!(adapter instanceof import_obsidian14.FileSystemAdapter))
+        if (!(adapter instanceof import_obsidian17.FileSystemAdapter))
           return;
         const absPath = adapter.getFullPath(entry.localPath);
         const name = (_a = entry.localPath.split("/").pop()) != null ? _a : entry.localPath;
@@ -2458,13 +3385,13 @@ var A4pImagePlugin = class extends import_obsidian14.Plugin {
     registerEditorTracker(this);
     this.registerEvent(
       this.app.vault.on("rename", (file, oldPath) => {
-        if (file instanceof import_obsidian14.TFile)
+        if (file instanceof import_obsidian17.TFile)
           this.manifestStore.handleRename(oldPath, file.path);
       })
     );
     this.registerEvent(
       this.app.vault.on("delete", (file) => {
-        if (file instanceof import_obsidian14.TFile)
+        if (file instanceof import_obsidian17.TFile)
           this.manifestStore.handleDelete(file.path);
       })
     );
@@ -2488,7 +3415,7 @@ var A4pImagePlugin = class extends import_obsidian14.Plugin {
       editorCallback: (_editor, ctx) => {
         const file = ctx.file;
         if (!file) {
-          new import_obsidian14.Notice("\uD65C\uC131 \uB178\uD2B8\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.");
+          new import_obsidian17.Notice("\uD65C\uC131 \uB178\uD2B8\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.");
           return;
         }
         void openConvertModal(this, [file], `\uD604\uC7AC \uB178\uD2B8: ${file.basename}`);
@@ -2508,15 +3435,15 @@ var A4pImagePlugin = class extends import_obsidian14.Plugin {
     });
     this.addCommand({
       id: "unused-report",
-      name: "\uBBF8\uC0AC\uC6A9 \uC774\uBBF8\uC9C0 \uB9AC\uD3EC\uD2B8 \uC0DD\uC131",
+      name: "\uBBF8\uC0AC\uC6A9 \uC774\uBBF8\uC9C0\xB7\uCCA8\uBD80 \uB9AC\uD3EC\uD2B8 \uC0DD\uC131",
       callback: () => void runUnusedReportCommand(this)
     });
     this.addCommand({
       id: "trash-unused",
-      name: "\uBBF8\uC0AC\uC6A9 \uC774\uBBF8\uC9C0 \uD734\uC9C0\uD1B5 \uC774\uB3D9 (\uC120\uD0DD\xB7\uC2B9\uC778 \uD544\uC694)",
+      name: "\uBBF8\uC0AC\uC6A9 \uC774\uBBF8\uC9C0\xB7\uCCA8\uBD80 \uD734\uC9C0\uD1B5 \uC774\uB3D9 (\uC120\uD0DD\xB7\uC2B9\uC778 \uD544\uC694)",
       callback: () => void runTrashUnusedCommand(this)
     });
-    if (import_obsidian14.Platform.isDesktopApp) {
+    if (import_obsidian17.Platform.isDesktopApp) {
       this.addCommand({
         id: "eagle-search-insert",
         name: "Eagle\uC5D0\uC11C \uC774\uBBF8\uC9C0 \uAC80\uC0C9\xB7\uC0BD\uC785",
@@ -2535,6 +3462,13 @@ var A4pImagePlugin = class extends import_obsidian14.Plugin {
   onunload() {
     void this.manifestStore.flush();
   }
+  /** 열려 있는 갤러리 뷰 전체 갱신 — 삭제 등 매니페스트 변경 후 호출 */
+  refreshGalleryViews() {
+    for (const leaf of this.app.workspace.getLeavesOfType(VIEW_TYPE_A4P_IMAGE_GALLERY)) {
+      if (leaf.view instanceof GalleryView)
+        leaf.view.refresh();
+    }
+  }
   async activateGalleryView() {
     var _a;
     const { workspace } = this.app;
@@ -2548,7 +3482,7 @@ var A4pImagePlugin = class extends import_obsidian14.Plugin {
     void workspace.revealLeaf(leaf);
   }
   createManifestIO() {
-    const indexPath = (0, import_obsidian14.normalizePath)(`${this.manifest.dir}/index.json`);
+    const indexPath = (0, import_obsidian17.normalizePath)(`${this.manifest.dir}/index.json`);
     const adapter = this.app.vault.adapter;
     return {
       read: async () => {

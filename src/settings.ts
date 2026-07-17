@@ -25,6 +25,10 @@ export interface A4pImageSettings {
   imageExtensions: string[];
   /** 미사용 이미지 리포트 노트를 만들 폴더 ("" = 볼트 루트) */
   reportFolder: string;
+  /** 미사용 분석·정리에 이미지 외 첨부 파일도 포함 */
+  includeAttachments: boolean;
+  /** 첨부로 간주할 확장자 허용 목록 — 여기 없는 확장자는 절대 정리 후보에 오르지 않음 */
+  attachmentExtensions: string[];
   eagle: {
     enabled: boolean;
     apiUrl: string;
@@ -54,6 +58,26 @@ export const DEFAULT_SETTINGS: A4pImageSettings = {
   fallbackToLocalEmbed: true,
   imageExtensions: ["png", "jpg", "jpeg", "gif", "webp", "svg", "bmp", "avif"],
   reportFolder: "",
+  includeAttachments: true,
+  attachmentExtensions: [
+    "pdf",
+    "mp3",
+    "m4a",
+    "wav",
+    "ogg",
+    "mp4",
+    "mov",
+    "webm",
+    "doc",
+    "docx",
+    "xls",
+    "xlsx",
+    "ppt",
+    "pptx",
+    "hwp",
+    "hwpx",
+    "zip",
+  ],
   eagle: {
     enabled: false,
     apiUrl: "http://localhost:41595",
@@ -281,13 +305,50 @@ export class A4pImageSettingTab extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName("리포트 폴더")
-      .setDesc("미사용 이미지 리포트 노트를 만들 폴더입니다. 비우면 볼트 루트에 만듭니다.")
+      .setDesc("미사용 이미지·첨부 리포트 노트를 만들 폴더입니다. 비우면 볼트 루트에 만듭니다.")
       .addText((text) =>
         text.setValue(this.plugin.settings.reportFolder).onChange(async (value) => {
           this.plugin.settings.reportFolder = value.trim();
           await this.plugin.persist();
         }),
       );
+
+    new Setting(containerEl).setName("미사용 첨부 파일 정리").setHeading();
+
+    new Setting(containerEl)
+      .setName("첨부 파일도 분석에 포함")
+      .setDesc(
+        "미사용 리포트·정리에서 이미지 외 첨부 파일(PDF·오디오 등)도 함께 분석합니다. " +
+          "어떤 노트도 링크·임베드하지 않는 파일만 후보에 오르며, 캔버스에서 쓰는 파일은 보호됩니다. " +
+          "정리는 항상 볼트 .trash/ 이동(복구 가능)뿐입니다.",
+      )
+      .addToggle((toggle) =>
+        toggle.setValue(this.plugin.settings.includeAttachments).onChange(async (value) => {
+          this.plugin.settings.includeAttachments = value;
+          await this.plugin.persist();
+          this.display();
+        }),
+      );
+
+    if (this.plugin.settings.includeAttachments) {
+      new Setting(containerEl)
+        .setName("첨부로 간주할 확장자")
+        .setDesc(
+          "쉼표로 구분합니다. 여기 나열된 확장자만 분석 대상이 됩니다 — 노트(md)·캔버스·설정 파일 등은 목록에 넣지 마세요.",
+        )
+        .addTextArea((text) =>
+          text
+            .setPlaceholder(DEFAULT_SETTINGS.attachmentExtensions.join(", "))
+            .setValue(this.plugin.settings.attachmentExtensions.join(", "))
+            .onChange(async (value) => {
+              this.plugin.settings.attachmentExtensions = value
+                .split(",")
+                .map((s) => s.trim().toLowerCase().replace(/^\./, ""))
+                .filter((s) => s.length > 0 && s !== "md" && s !== "canvas");
+              await this.plugin.persist();
+            }),
+        );
+    }
 
     if (Platform.isDesktopApp) {
       new Setting(containerEl).setName("Eagle 연동 (데스크톱 전용)").setHeading();

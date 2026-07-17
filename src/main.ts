@@ -107,13 +107,13 @@ export default class A4pImagePlugin extends Plugin {
 
     this.addCommand({
       id: "unused-report",
-      name: "미사용 이미지 리포트 생성",
+      name: "미사용 이미지·첨부 리포트 생성",
       callback: () => void runUnusedReportCommand(this),
     });
 
     this.addCommand({
       id: "trash-unused",
-      name: "미사용 이미지 휴지통 이동 (선택·승인 필요)",
+      name: "미사용 이미지·첨부 휴지통 이동 (선택·승인 필요)",
       callback: () => void runTrashUnusedCommand(this),
     });
 
@@ -133,6 +133,13 @@ export default class A4pImagePlugin extends Plugin {
 
   onunload() {
     void this.manifestStore.flush();
+  }
+
+  /** 열려 있는 갤러리 뷰 전체 갱신 — 삭제 등 매니페스트 변경 후 호출 */
+  refreshGalleryViews(): void {
+    for (const leaf of this.app.workspace.getLeavesOfType(VIEW_TYPE_A4P_IMAGE_GALLERY)) {
+      if (leaf.view instanceof GalleryView) leaf.view.refresh();
+    }
   }
 
   async activateGalleryView(): Promise<void> {

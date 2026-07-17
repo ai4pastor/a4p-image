@@ -5,8 +5,9 @@ import { formatBytes } from "./convert";
 import { stemOf } from "./filename";
 import { insertAtEditor } from "./insert";
 import { findImageUsages } from "./commands";
+import { DeleteImageModal } from "./delete-modal";
 
-const STATUS_LABEL: Record<string, string> = {
+export const STATUS_LABEL: Record<string, string> = {
   uploaded: "업로드됨",
   pending: "대기 중",
   failed: "실패",
@@ -52,13 +53,20 @@ export class ImagePreviewModal extends Modal {
       dateStyle: "medium",
       timeStyle: "short",
     });
-    subEl.setText(`${formatBytes(entry.size)} · ${STATUS_LABEL[entry.status] ?? entry.status} · ${dateStr}`);
+    const renderSub = (dims?: string) => {
+      subEl.empty();
+      const parts = [formatBytes(entry.size)];
+      if (dims) parts.push(dims);
+      parts.push(dateStr);
+      subEl.createSpan({ text: parts.join(" · ") });
+      subEl.createSpan({
+        cls: `a4p-img-status-pill ${entry.status}`,
+        text: STATUS_LABEL[entry.status] ?? entry.status,
+      });
+    };
+    renderSub();
     img.addEventListener("load", () => {
-      if (img.naturalWidth) {
-        subEl.setText(
-          `${formatBytes(entry.size)} · ${img.naturalWidth}×${img.naturalHeight} · ${STATUS_LABEL[entry.status] ?? entry.status} · ${dateStr}`,
-        );
-      }
+      if (img.naturalWidth) renderSub(`${img.naturalWidth}×${img.naturalHeight}`);
     });
 
     if (entry.sourceNote) {
@@ -107,6 +115,11 @@ export class ImagePreviewModal extends Modal {
       });
     }
 
+    this.actionButton(actions, "trash-2", "삭제…", { danger: true }, () => {
+      this.close();
+      new DeleteImageModal(this.app, this.plugin, entry).open();
+    });
+
     this.actionButton(actions, "search", "사용처 검색", {}, async (btn) => {
       btn.disabled = true;
       setIcon(btn.querySelector(".a4p-img-btn-icon") as HTMLElement, "loader-2");
@@ -124,11 +137,12 @@ export class ImagePreviewModal extends Modal {
     parent: HTMLElement,
     icon: string,
     label: string,
-    opts: { cta?: boolean; iconOnly?: boolean },
+    opts: { cta?: boolean; iconOnly?: boolean; danger?: boolean },
     onClick: (btn: HTMLButtonElement) => void | Promise<void>,
   ): void {
     const btn = parent.createEl("button", { cls: "a4p-img-btn" });
     if (opts.cta) btn.addClass("mod-cta");
+    if (opts.danger) btn.addClass("a4p-img-btn--danger");
     if (opts.iconOnly) {
       btn.addClass("a4p-img-btn--icon");
       btn.title = label;
